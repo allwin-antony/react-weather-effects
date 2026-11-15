@@ -3,10 +3,12 @@
 Composable, high-performance rain, snow, and fog visual effects for React, rendered on a single lightweight 2D canvas.
 
 [![npm version](https://img.shields.io/npm/v/react-weather-effects.svg)](https://www.npmjs.com/package/react-weather-effects)
+[![Live Demo](https://img.shields.io/badge/Demo-Live%20Playground-0070f3?logo=vercel)](https://react-weather-effects-smoky.vercel.app/)
 [![GitHub](https://img.shields.io/badge/GitHub-Repository-181717?logo=github)](https://github.com/allwin-antony/react-weather-effects)
 [![Sponsor](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=githubsponsors)](https://github.com/sponsors/allwin-antony)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+- **Live Demo:** [https://react-weather-effects-smoky.vercel.app/](https://react-weather-effects-smoky.vercel.app/)
 - **GitHub:** [https://github.com/allwin-antony/react-weather-effects](https://github.com/allwin-antony/react-weather-effects)
 - **npm:** [https://www.npmjs.com/package/react-weather-effects](https://www.npmjs.com/package/react-weather-effects)
 - **Sponsor:** [https://github.com/sponsors/allwin-antony](https://github.com/sponsors/allwin-antony)
@@ -70,6 +72,7 @@ By default, `<WeatherCanvas>` runs in `mode="fullscreen"`, covering the viewport
 - **Single Canvas Engine:** One 2D `<canvas>` manages all effects, batching rendering at 60 FPS without DOM bloat.
 - **Composable:** Combine multiple effects (`Rain`, `Snow`, `Fog`) inside a single canvas.
 - **Configurable:** Adjust intensity, speed, wind angle, colors, and custom snowflake sprite artwork.
+- **Smooth Scene Changes:** Opt into particle-preserving intensity and density fades with `transitionDuration`.
 - **Motion-Aware & Accessible:** Automatically respects `prefers-reduced-motion` and pauses when hidden or offscreen.
 - **Contained & Fullscreen:** Place inside specific cards/heroes (`mode="contained"`) or cover the whole screen.
 - **SSR & Next.js Safe:** Safe for React Server Components (RSC) and Next.js App Router (runs cleanly with `'use client'`).
@@ -140,6 +143,30 @@ export function RainyScene() {
 
 Fog draws behind rain and snow. Rain and snow share a drawing priority; instances at that priority draw in registration order. Each effect has its own settings and can be mounted or removed independently.
 
+### Transition between scenes
+
+Set `transitionDuration` on each effect to fade intensity or density changes over that many milliseconds. Keep the canvas and effects mounted, and use `0` to hide an effect instead of conditionally removing it:
+
+```tsx
+import { WeatherCanvas, Rain, Snow, Fog } from 'react-weather-effects';
+
+export function TransitioningScene({ scene }: { scene: 'rain' | 'snow' | 'clear' }) {
+  return (
+    <WeatherCanvas>
+      <Fog density={scene === 'rain' ? 0.3 : 0} transitionDuration={800} />
+      <Rain intensity={scene === 'rain' ? 0.8 : 0} transitionDuration={800} />
+      <Snow intensity={scene === 'snow' ? 0.6 : 0} transitionDuration={800} />
+    </WeatherCanvas>
+  );
+}
+```
+
+- The default is `0`, preserving instant updates. Initial mounting and unmounting are also immediate.
+- Rain and snow fade added or removed particles without resetting the pool. Retained particles stay visible and continue moving; fog keeps its existing wisps and texture.
+- Changing the target mid-fade continues from the current visibility. Negative or non-finite durations are treated as `0`.
+- Fades use the shared simulation clock, so hidden/offscreen time does not advance them. Static and paused presentations apply the latest settings immediately without animating.
+- Only rain/snow `intensity` and fog `density` are transitioned. Other props, including rain's existing velocity smoothing, retain their current behavior.
+
 ### Use custom snow artwork
 
 Add a static image to your application's public assets, for example `public/snowflakes/crystal.svg`, and pass its served URL:
@@ -177,7 +204,7 @@ Pass a **URL string**, not an SVG React component or raw SVG markup. PNG, SVG, a
 
 For remote images, the image server must allow anonymous cross-origin requests with an appropriate `Access-Control-Allow-Origin` header. Serving artwork from your own application is the simplest option.
 
-`wobble={false}` disables the animated sway and gentle sprite rotation. Wind can still move the flakes. There is no separate `rotation` prop in the current API.
+`wobble={false}` disables animated sideways sway and fall flutter. You can control sprite rotation separately with `rotation` (set `false` to let custom sprites drift upright without rotating, or `true` with `wobble={false}` to rotate without swaying) and adjust the spinning rate with `rotationSpeed` (multiplier, default `1`; set `0` to freeze rotation).
 
 ### Pause and resume a scene
 
@@ -230,21 +257,30 @@ Wind is an effect-specific input, not a velocity in pixels per second. Rain and 
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
 | `intensity` | `number` | `0.7` | Fraction of this instance's particle budget to draw. `0` draws no rain. |
+| `transitionDuration` | `number` | `0` | Intensity fade duration in milliseconds. Keep mounted and set intensity to `0` to fade out. |
 | `angle` | `number` | `10` | Degrees from vertical. Positive values lean right; negative values lean left. |
 | `speed` | `number` | `1` | Multiplier for intrinsic falling speed. |
-| `color` | `string` | `'rgba(190, 215, 245, 0.8)'` | CSS color for rain trails. |
+| `dropLength` | `number` | `1` | Multiplier for raindrop streak length (< 1 for fine drizzle, > 1 for heavy downpour). Alias: `length`. |
+| `dropThickness` | `number` | `1` | Multiplier for raindrop stroke thickness (< 1 for fine mist, > 1 for heavy rain). Alias: `thickness`. |
+| `splashes` | `boolean` | `false` | Enable animated bottom-edge splashes for contained cards or heroes. Alias: `splash`. |
+| `color` | `string` | `'rgba(190, 215, 245, 0.8)'` | CSS color for rain trails and splashes. |
+
+With `splashes`, visible drops produce small, varied droplets that rise and fall over a softly expanding ground ripple. Splash size follows `dropThickness`; existing impacts finish their short animation when rain stops. Under heavy rain, excess impacts are skipped instead of restarting active splashes. Splashes stay at the current canvas bottom edge after resizing, and paused/static redraws preserve their state. Use contained mode for a defined ground edge; splashes do not detect other DOM surfaces.
 
 ### `Snow`
 
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
 | `intensity` | `number` | `0.5` | Fraction of this instance's particle budget to draw. `0` draws no snow. |
+| `transitionDuration` | `number` | `0` | Intensity fade duration in milliseconds. Keep mounted and set intensity to `0` to fade out. |
 | `speed` | `number` | `1` | Multiplier for intrinsic falling speed and wobble progression. |
 | `color` | `string` | `'rgba(255, 255, 255, 0.85)'` | CSS color for built-in flakes and the sprite fallback. Does not tint artwork. |
 | `sprite` | `string` | None | Static image URL. Omitting it uses soft, built-in snowflakes. |
 | `minSize` | `number` | `1.5`, or `6` with a sprite | Minimum flake radius in CSS pixels. |
 | `maxSize` | `number` | `4`, or `18` with a sprite | Maximum flake radius in CSS pixels. |
-| `wobble` | `boolean` | `true` | Enable animated sway and gentle sprite rotation. |
+| `wobble` | `boolean` | `true` | Enable animated sideways sway and fall flutter. |
+| `rotation` | `boolean` | `true` (or `wobble`) | Enable sprite rotation/spinning. Defaults to `wobble`. Set `false` to drift without rotating. |
+| `rotationSpeed` | `number` | `1` | Multiplier for sprite rotation/spinning speed. Defaults to `1`. Set to `0` to freeze angle. |
 
 Use nonnegative sizes, with `minSize <= maxSize`. Built-in flakes have a feathered glow that extends beyond their nominal radius.
 
@@ -253,6 +289,7 @@ Use nonnegative sizes, with `minSize <= maxSize`. Built-in flakes have a feather
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
 | `density` | `number` | `0.4` | Opacity multiplier. `0` draws no fog. |
+| `transitionDuration` | `number` | `0` | Density fade duration in milliseconds. Keep mounted and set density to `0` to fade out. |
 | `speed` | `number` | `1` | Multiplier for intrinsic drift and shape movement. |
 | `color` | `string` | `'rgba(220, 225, 235, 0.35)'` | CSS color used to tint the cached fog texture. |
 | `layers` | `number` | `3` | Layer count, rounded and clamped between `1` and `6`. |

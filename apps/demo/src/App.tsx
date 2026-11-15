@@ -111,6 +111,7 @@ export function App() {
   const [quality, setQuality] = useState<Quality>('medium');
   const [reducedMotion, setReducedMotion] = useState<ReducedMotionProp>('auto');
   const [paused, setPaused] = useState(false);
+  const [transitionDuration, setTransitionDuration] = useState(800);
   const [windX, setWindX] = useState(0.2);
   const [windY, setWindY] = useState(0);
   const [bgTheme, setBgTheme] = useState<BgTheme>('night');
@@ -120,12 +121,17 @@ export function App() {
   const [rainIntensity, setRainIntensity] = useState(0.7);
   const [rainAngle, setRainAngle] = useState(12);
   const [rainSpeed, setRainSpeed] = useState(1);
+  const [rainDropLength, setRainDropLength] = useState(1);
+  const [rainDropThickness, setRainDropThickness] = useState(1);
+  const [rainSplashes, setRainSplashes] = useState(false);
 
   // --- Snow ---
   const [enableSnow, setEnableSnow] = useState(true);
   const [snowIntensity, setSnowIntensity] = useState(0.5);
   const [snowSpeed, setSnowSpeed] = useState(0.85);
   const [snowWobble, setSnowWobble] = useState(true);
+  const [snowRotation, setSnowRotation] = useState(true);
+  const [snowRotationSpeed, setSnowRotationSpeed] = useState(1);
   const [snowSprite, setSnowSprite] = useState<SpriteChoice>('watercolor');
   const [snowMinSize, setSnowMinSize] = useState(8);
   const [snowMaxSize, setSnowMaxSize] = useState(22);
@@ -230,30 +236,32 @@ export function App() {
   // Build the effect children once so both modes share identical markup
   const effects = (
     <>
-      {enableRain && (
-        <Rain
-          intensity={rainIntensity}
-          angle={rainAngle}
-          speed={rainSpeed}
-        />
-      )}
-      {enableSnow && (
-        <Snow
-          intensity={snowIntensity}
-          speed={snowSpeed}
-          wobble={snowWobble}
-          sprite={spriteUrl}
-          minSize={snowMinSize}
-          maxSize={snowMaxSize}
-        />
-      )}
-      {enableFog && (
-        <Fog
-          density={fogDensity}
-          speed={fogSpeed}
-          layers={fogLayers}
-        />
-      )}
+      <Rain
+        intensity={enableRain ? rainIntensity : 0}
+        transitionDuration={transitionDuration}
+        angle={rainAngle}
+        speed={rainSpeed}
+        dropLength={rainDropLength}
+        dropThickness={rainDropThickness}
+        splashes={rainSplashes}
+      />
+      <Snow
+        intensity={enableSnow ? snowIntensity : 0}
+        transitionDuration={transitionDuration}
+        speed={snowSpeed}
+        wobble={snowWobble}
+        rotation={snowRotation}
+        rotationSpeed={snowRotationSpeed}
+        sprite={spriteUrl}
+        minSize={snowMinSize}
+        maxSize={snowMaxSize}
+      />
+      <Fog
+        density={enableFog ? fogDensity : 0}
+        transitionDuration={transitionDuration}
+        speed={fogSpeed}
+        layers={fogLayers}
+      />
     </>
   );
 
@@ -552,6 +560,10 @@ export function App() {
             </div>
           </Section>
 
+          <Section title="Scene transitions">
+            <Slider label="Fade duration" value={transitionDuration} min={0} max={2000} step={100} format={(v) => `${v} ms`} onChange={setTransitionDuration} />
+          </Section>
+
           {/* ---- Wind ---- */}
           <Section title="Wind">
             <Slider label="Horizontal (x)" value={windX} min={-2} max={2} step={0.05} format={fixed2} onChange={setWindX} />
@@ -573,7 +585,11 @@ export function App() {
             <Slider label="Speed" value={snowSpeed} min={0} max={2.5} step={0.05} format={x2} onChange={setSnowSpeed} />
             <Slider label="Min size (px)" value={snowMinSize} min={0.5} max={30} step={0.5} format={x1} onChange={setSnowMinSize} />
             <Slider label="Max size (px)" value={snowMaxSize} min={1} max={40} step={0.5} format={x1} onChange={setSnowMaxSize} />
-            <Toggle label="Wobble & rotation" checked={snowWobble} onChange={setSnowWobble} />
+            <Toggle label="Wobble (sway)" checked={snowWobble} onChange={setSnowWobble} />
+            <Toggle label="Rotation (spin)" checked={snowRotation} onChange={setSnowRotation} />
+            {snowRotation && (
+              <Slider label="Rotation speed" value={snowRotationSpeed} min={0} max={3} step={0.1} format={x2} onChange={setSnowRotationSpeed} />
+            )}
           </Section>
 
           {/* ---- Rain ---- */}
@@ -581,6 +597,9 @@ export function App() {
             <Slider label="Intensity" value={rainIntensity} min={0} max={1} step={0.02} format={pct} onChange={setRainIntensity} />
             <Slider label="Angle" value={rainAngle} min={-45} max={45} step={1} format={deg} onChange={setRainAngle} />
             <Slider label="Speed" value={rainSpeed} min={0} max={2.5} step={0.05} format={x2} onChange={setRainSpeed} />
+            <Slider label="Drop length" value={rainDropLength} min={0.2} max={3} step={0.1} format={x2} onChange={setRainDropLength} />
+            <Slider label="Drop thickness" value={rainDropThickness} min={0.4} max={3} step={0.1} format={x2} onChange={setRainDropThickness} />
+            <Toggle label="Bottom splashes" checked={rainSplashes} onChange={setRainSplashes} />
           </Section>
 
           {/* ---- Fog ---- */}

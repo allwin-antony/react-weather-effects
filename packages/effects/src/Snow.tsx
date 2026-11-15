@@ -7,9 +7,12 @@ import {
   PARTICLE_STRIDE,
   TickerCtx,
 } from '@react-weather-effects/core';
+import { createParticleTransition, updateParticleTransition } from './transition';
 
 export interface SnowProps {
   intensity?: number;
+  /** Intensity fade duration in milliseconds; 0 (default) applies changes immediately. */
+  transitionDuration?: number;
   speed?: number;
   color?: string;
   /**
@@ -21,16 +24,31 @@ export interface SnowProps {
   minSize?: number;
   /** Radius in CSS pixels; defaults to 18 for sprites, 4 for built-in flakes. */
   maxSize?: number;
+  /** Enable animated sideways sway and fall flutter. Defaults to true. */
   wobble?: boolean;
+  /**
+   * Enable sprite rotation / spinning.
+   * Defaults to `wobble` (enabled when wobble is enabled).
+   * Set to `false` to let sprites drift without rotating, or `true` with `wobble={false}` to rotate without swaying.
+   */
+  rotation?: boolean;
+  /**
+   * Multiplier for sprite rotation / spinning speed.
+   * Defaults to 1. Set to 0 to freeze rotation.
+   */
+  rotationSpeed?: number;
 }
 
 interface SnowSettings {
   intensity: number;
+  transitionDuration: number;
   speed: number;
   color: string;
   minSize: number;
   maxSize: number;
   wobble: boolean;
+  rotation: boolean;
+  rotationSpeed: number;
 }
 
 interface SnowSprite {
@@ -119,12 +137,14 @@ function seedSnowflake(
     }
   }
 
+  const phase = state.random() * Math.PI * 2;
+
   pool[base] = x;
   pool[base + 1] = y;
-  pool[base + 2] = 0; // horizontal velocity
+  pool[base + 2] = phase; // rotation angle
   pool[base + 3] = fallSpeed; // intrinsic fall speed
   pool[base + 4] = 0.3 + depth * 0.6; // alpha
-  pool[base + 5] = state.random() * Math.PI * 2; // wobble phase
+  pool[base + 5] = phase; // wobble phase
   pool[base + 6] = depth;
 }
 
@@ -155,6 +175,7 @@ function updateSnow(
     const base = i * PARTICLE_STRIDE;
     let x = pool[base];
     let y = pool[base + 1];
+    let angle = pool[base + 2];
     let phase = pool[base + 5];
     const baseVy = pool[base + 3];
     const depth = pool[base + 6];
@@ -162,6 +183,12 @@ function updateSnow(
     if (settings.wobble) {
       phase += dt * (0.65 + depth * 1.4) * settings.speed;
       pool[base + 5] = phase;
+    }
+
+    if (settings.rotation && settings.rotationSpeed !== 0) {
+      const spinDir = i % 2 === 0 ? 1 : -1;
+      const spinRate = (0.65 + depth * 1.4) * spinDir;
+      angle += dt * spinRate * settings.rotationSpeed;
     }
 
     const sway = settings.wobble
@@ -184,7 +211,7 @@ function updateSnow(
     } else {
       pool[base] = x;
       pool[base + 1] = y;
-      pool[base + 2] = vx;
+      pool[base + 2] = angle;
     }
   }
 }
@@ -196,6 +223,7 @@ function drawSnow(
   settings: SnowSettings,
   texture: CanvasImageSource | null,
   sprite: SnowSprite | null,
+  visibility: Float32Array,
 ): void {
   if (count === 0) return;
 
@@ -204,6 +232,7 @@ function drawSnow(
   ctx.fillStyle = settings.color;
 
   for (let i = 0; i < count; i++) {
+    if (visibility[i] === 0) continue;
     const base = i * PARTICLE_STRIDE;
     const x = pool[base];
     const y = pool[base + 1];
@@ -212,14 +241,14 @@ function drawSnow(
     if (r === 0) continue;
 
     const fade = Math.max(0, Math.min(1, (y + 20) / 45, (state.height + 20 - y) / 55));
-    ctx.globalAlpha = pool[base + 4] * fade;
+    ctx.globalAlpha = pool[base + 4] * fade * visibility[i];
     if (sprite) {
       const halfWidth = r * Math.min(1, aspect);
       const halfHeight = r / Math.max(1, aspect);
       ctx.save();
       try {
         ctx.translate(x, y);
-        if (settings.wobble) ctx.rotate(Math.sin(pool[base + 5]) * 0.35);
+        if (settings.rotation) ctx.rotate(pool[base + 2]);
         ctx.drawImage(sprite.texture, -halfWidth, -halfHeight, halfWidth * 2, halfHeight * 2);
       } finally {
         ctx.restore();
@@ -239,12 +268,15 @@ function drawSnow(
 
 export function Snow({
   intensity = 0.5,
+  transitionDuration = 0,
   speed = 1,
   color = 'rgba(255, 255, 255, 0.85)',
   sprite,
   minSize = sprite ? 6 : 1.5,
   maxSize = sprite ? 18 : 4,
   wobble = true,
+  rotation,
+  rotationSpeed,
 }: SnowProps) {
   const ticker = useContext(TickerCtx);
 
@@ -252,21 +284,48 @@ export function Snow({
     throw new Error('<Snow /> must be used inside <WeatherCanvas>');
   }
 
+  const effectiveRotation = rotation ?? (rotationSpeed !== undefined ? true : wobble);
+  const effectiveRotationSpeed = rotationSpeed ?? 1;
+
   const settingsRef = useRef<SnowSettings>({
     intensity,
+    transitionDuration,
     speed,
     color,
     minSize,
     maxSize,
     wobble,
+    rotation: effectiveRotation,
+    rotationSpeed: effectiveRotationSpeed,
   });
   const textureRef = useRef<CanvasImageSource | null>(null);
   const spriteRef = useRef<SnowSprite | null>(null);
 
   useEffect(() => {
-    settingsRef.current = { intensity, speed, color, minSize, maxSize, wobble };
+    settingsRef.current = {
+      intensity,
+      transitionDuration,
+      speed,
+      color,
+      minSize,
+      maxSize,
+      wobble,
+      rotation: effectiveRotation,
+      rotationSpeed: effectiveRotationSpeed,
+    };
     ticker.invalidate();
-  }, [ticker, intensity, speed, color, minSize, maxSize, wobble]);
+  }, [
+    ticker,
+    intensity,
+    transitionDuration,
+    speed,
+    color,
+    minSize,
+    maxSize,
+    wobble,
+    effectiveRotation,
+    effectiveRotationSpeed,
+  ]);
 
   useEffect(() => {
     textureRef.current = createSnowTexture(color);
@@ -312,14 +371,22 @@ export function Snow({
   }, [ticker, sprite]);
 
   useEffect(() => {
-    let pool = createParticlePool(ticker.getBudget().maxParticles);
+    const capacity = ticker.getBudget().maxParticles;
+    let pool = createParticlePool(capacity);
+    const particles = createParticleTransition(
+      Math.round(Math.max(0, Math.min(1, settingsRef.current.intensity)) * capacity),
+      capacity,
+      settingsRef.current.transitionDuration,
+    );
     let initializedCount = 0;
 
     const unregister = ticker.register(LAYER.MIDGROUND, (state) => {
       const settings = settingsRef.current;
-      const count = Math.round(
+      const targetCount = Math.round(
         Math.max(0, Math.min(1, settings.intensity)) * state.budget.maxParticles,
       );
+      updateParticleTransition(particles, targetCount, settings.transitionDuration, state);
+      const count = particles.count;
 
       pool = growParticlePool(pool, state.budget.maxParticles);
       if (count > initializedCount) {
@@ -340,7 +407,7 @@ export function Snow({
           spriteRef.current = createSnowSprite(cachedSprite.image, size) ?? cachedSprite;
         }
       }
-      drawSnow(pool, count, state, settings, textureRef.current, spriteRef.current);
+      drawSnow(pool, count, state, settings, textureRef.current, spriteRef.current, particles.visibility);
     });
 
     return unregister;

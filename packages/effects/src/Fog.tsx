@@ -4,9 +4,12 @@ import {
   LAYER,
   TickerCtx,
 } from '@react-weather-effects/core';
+import { createTransition, stepTransition } from './transition';
 
 export interface FogProps {
   density?: number;
+  /** Density fade duration in milliseconds; 0 (default) applies changes immediately. */
+  transitionDuration?: number;
   speed?: number;
   color?: string;
   layers?: number;
@@ -14,6 +17,7 @@ export interface FogProps {
 
 interface FogSettings {
   density: number;
+  transitionDuration: number;
   speed: number;
   color: string;
   layers: number;
@@ -74,6 +78,7 @@ function renderRadialGradient(
 
 export function Fog({
   density = 0.4,
+  transitionDuration = 0,
   speed = 1,
   color = 'rgba(220, 225, 235, 0.35)',
   layers = 3,
@@ -84,12 +89,12 @@ export function Fog({
     throw new Error('<Fog /> must be used inside <WeatherCanvas>');
   }
 
-  const settingsRef = useRef<FogSettings>({ density, speed, color, layers });
+  const settingsRef = useRef<FogSettings>({ density, transitionDuration, speed, color, layers });
 
   useEffect(() => {
-    settingsRef.current = { density, speed, color, layers };
+    settingsRef.current = { density, transitionDuration, speed, color, layers };
     ticker.invalidate();
-  }, [ticker, density, speed, color, layers]);
+  }, [ticker, density, transitionDuration, speed, color, layers]);
 
   // Cached texture
   const textureRef = useRef<CanvasImageSource | null>(null);
@@ -149,6 +154,8 @@ export function Fog({
 
   useEffect(() => {
     const puffs: FogPuff[] = [];
+    let currentDensity = Math.max(0, Math.min(1, settingsRef.current.density));
+    const transition = createTransition(currentDensity, settingsRef.current.transitionDuration);
     const unregister = ticker.register(LAYER.BACKGROUND, (state: FrameState) => {
       const texture = textureRef.current;
       if (!texture) return;
@@ -156,7 +163,10 @@ export function Fog({
       const settings = settingsRef.current;
       const numLayers = Math.round(Math.max(1, Math.min(6, settings.layers)));
       const count = numLayers * 3;
-      const baseAlpha = Math.max(0, Math.min(1, settings.density));
+      const targetDensity = Math.max(0, Math.min(1, settings.density));
+      const step = stepTransition(transition, targetDensity, settings.transitionDuration, state);
+      currentDensity = step === 1 ? targetDensity : currentDensity + (targetDensity - currentDensity) * step;
+      const baseAlpha = currentDensity;
       if (baseAlpha === 0) return;
 
       // Normalized positions resize with the canvas; new layers retain existing wisps.
