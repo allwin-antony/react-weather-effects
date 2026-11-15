@@ -2,6 +2,15 @@
 
 Composable, high-performance rain, snow, and fog visual effects for React, rendered on a single lightweight 2D canvas.
 
+[![npm version](https://img.shields.io/npm/v/react-weather-effects.svg)](https://www.npmjs.com/package/react-weather-effects)
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-181717?logo=github)](https://github.com/allwin-antony/react-weather-effects)
+[![Sponsor](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=githubsponsors)](https://github.com/sponsors/allwin-antony)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+- **GitHub:** [https://github.com/allwin-antony/react-weather-effects](https://github.com/allwin-antony/react-weather-effects)
+- **npm:** [https://www.npmjs.com/package/react-weather-effects](https://www.npmjs.com/package/react-weather-effects)
+- **Sponsor:** [https://github.com/sponsors/allwin-antony](https://github.com/sponsors/allwin-antony)
+
 ## Installation
 
 Install `react-weather-effects` using your package manager of choice:
@@ -76,6 +85,7 @@ By default, `<WeatherCanvas>` runs in `mode="fullscreen"`, covering the viewport
 - [Server rendering and Next.js](#server-rendering-and-nextjs)
 - [Troubleshooting](#troubleshooting)
 - [Local development](#local-development)
+- [Sponsoring](#sponsoring)
 - [License](#license)
 
 ## Usage examples
@@ -412,6 +422,12 @@ npm install /path/to/react-weather-effects-0.1.0-beta.0.tgz
 ```
 
 For implementation contracts, package boundaries, and future plans, see `ARCHITECTURE.md` in the source repository. Keep changes focused, cover rendering and lifecycle behavior with tests, and verify the build, types, and size budget before submitting changes.
+
+## Sponsoring
+
+If you find `react-weather-effects` useful, please consider sponsoring its ongoing development and maintenance:
+
+💖 [**Sponsor on GitHub**](https://github.com/sponsors/allwin-antony)
 
 ## License
 

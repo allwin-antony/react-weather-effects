@@ -10,4 +10,5 @@ storybook-static/
 apps/*/dist
 apps/*/.vite
 apps/*/.vite-temp
+apps/npm-demo/
 graphify-out
