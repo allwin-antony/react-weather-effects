@@ -260,7 +260,10 @@ Wind is an effect-specific input, not a velocity in pixels per second. Rain and 
 | `transitionDuration` | `number` | `0` | Intensity fade duration in milliseconds. Keep mounted and set intensity to `0` to fade out. |
 | `angle` | `number` | `10` | Degrees from vertical. Positive values lean right; negative values lean left. |
 | `speed` | `number` | `1` | Multiplier for intrinsic falling speed. |
-| `color` | `string` | `'rgba(190, 215, 245, 0.8)'` | CSS color for rain trails. |
+| `dropLength` | `number` | `1` | Multiplier for raindrop streak length (< 1 for fine drizzle, > 1 for heavy downpour). Alias: `length`. |
+| `dropThickness` | `number` | `1` | Multiplier for raindrop stroke thickness (< 1 for fine mist, > 1 for heavy rain). Alias: `thickness`. |
+| `splashes` | `boolean` | `false` | Enable animated bottom-edge splashes for contained cards or heroes. Alias: `splash`. |
+| `color` | `string` | `'rgba(190, 215, 245, 0.8)'` | CSS color for rain trails and splashes. |
 
 ### `Snow`
 

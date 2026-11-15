@@ -794,4 +794,65 @@ describe('Weather Effects', () => {
     act(draw);
     expect(rotates).toHaveBeenCalled();
   });
+
+  it('customizes Rain drop length, drop thickness, and bottom-edge splashes', () => {
+    const { ctx, frame, random, ticker, draw } = createEffectHarness(4);
+    random.mockImplementation(() => 0.5);
+
+    const linesTo = vi.spyOn(ctx, 'lineTo');
+    const movesTo = vi.spyOn(ctx, 'moveTo');
+    const ellipses = vi.spyOn(ctx, 'ellipse');
+
+    // 1. Baseline: dropLength=1, dropThickness=1, splashes=false
+    const { rerender } = render(
+      <TickerCtx.Provider value={ticker}>
+        <Rain intensity={0.5} dropLength={1} dropThickness={1} splashes={false} />
+      </TickerCtx.Provider>,
+    );
+
+    act(draw);
+    expect(linesTo).toHaveBeenCalled();
+    expect(ellipses).not.toHaveBeenCalled();
+
+    const baselineLineWidth = ctx.lineWidth;
+    const baseLineFrom = movesTo.mock.calls[0];
+    const baseLineTo = linesTo.mock.calls[0];
+    const baseDy = Math.abs(baseLineTo[1] - baseLineFrom[1]);
+
+    // 2. Custom dropLength=2 and dropThickness=2
+    rerender(
+      <TickerCtx.Provider value={ticker}>
+        <Rain intensity={0.5} dropLength={2} dropThickness={2} splashes={false} />
+      </TickerCtx.Provider>,
+    );
+
+    linesTo.mockClear();
+    movesTo.mockClear();
+    act(draw);
+
+    const thickLineWidth = ctx.lineWidth;
+    expect(thickLineWidth).toBeCloseTo(baselineLineWidth * 2, 3);
+
+    const longLineFrom = movesTo.mock.calls[0];
+    const longLineTo = linesTo.mock.calls[0];
+    const longDy = Math.abs(longLineTo[1] - longLineFrom[1]);
+    expect(longDy).toBeCloseTo(baseDy * 2, 3);
+
+    // 3. Optional bottom-edge splashes
+    rerender(
+      <TickerCtx.Provider value={ticker}>
+        <Rain intensity={0.5} splashes={true} />
+      </TickerCtx.Provider>,
+    );
+
+    // Advance frames until raindrops hit the bottom edge (height = 600)
+    ellipses.mockClear();
+    frame.dt = 0.08;
+    for (let f = 0; f < 15; f++) {
+      act(draw);
+    }
+    expect(ellipses).toHaveBeenCalled();
+    const splashY = ellipses.mock.calls[0][1];
+    expect(splashY).toBe(frame.height);
+  });
 });

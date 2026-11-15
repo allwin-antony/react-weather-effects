@@ -121,6 +121,9 @@ export function App() {
   const [rainIntensity, setRainIntensity] = useState(0.7);
   const [rainAngle, setRainAngle] = useState(12);
   const [rainSpeed, setRainSpeed] = useState(1);
+  const [rainDropLength, setRainDropLength] = useState(1);
+  const [rainDropThickness, setRainDropThickness] = useState(1);
+  const [rainSplashes, setRainSplashes] = useState(false);
 
   // --- Snow ---
   const [enableSnow, setEnableSnow] = useState(true);
@@ -238,6 +241,9 @@ export function App() {
         transitionDuration={transitionDuration}
         angle={rainAngle}
         speed={rainSpeed}
+        dropLength={rainDropLength}
+        dropThickness={rainDropThickness}
+        splashes={rainSplashes}
       />
       <Snow
         intensity={enableSnow ? snowIntensity : 0}
@@ -591,6 +597,9 @@ export function App() {
             <Slider label="Intensity" value={rainIntensity} min={0} max={1} step={0.02} format={pct} onChange={setRainIntensity} />
             <Slider label="Angle" value={rainAngle} min={-45} max={45} step={1} format={deg} onChange={setRainAngle} />
             <Slider label="Speed" value={rainSpeed} min={0} max={2.5} step={0.05} format={x2} onChange={setRainSpeed} />
+            <Slider label="Drop length" value={rainDropLength} min={0.2} max={3} step={0.1} format={x2} onChange={setRainDropLength} />
+            <Slider label="Drop thickness" value={rainDropThickness} min={0.4} max={3} step={0.1} format={x2} onChange={setRainDropThickness} />
+            <Toggle label="Bottom splashes" checked={rainSplashes} onChange={setRainSplashes} />
           </Section>
 
           {/* ---- Fog ---- */}
