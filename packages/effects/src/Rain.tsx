@@ -48,7 +48,7 @@ interface RainSettings {
   splashes: boolean;
 }
 
-const SPLASH_STRIDE = 6;
+const SPLASH_STRIDE = 7;
 
 function seedParticle(
   pool: Float32Array,
@@ -101,7 +101,7 @@ function updatePool(
   visibility: Float32Array,
   splashPool: Float32Array,
   maxSplashes: number,
-  splashState: { head: number },
+  splashState: { head: number; active: boolean },
 ): void {
   const dt = state.dt;
   const width = state.width;
@@ -111,6 +111,17 @@ function updatePool(
   const sinAngle = Math.sin(angleRad);
   const cosAngle = Math.cos(angleRad);
   const response = 1 - Math.exp(-dt * 5);
+
+  // Age existing impacts first; newly spawned splashes only age after their hit time.
+  if (splashState.active) {
+    splashState.active = false;
+    for (let s = 0; s < maxSplashes; s++) {
+      const sBase = s * SPLASH_STRIDE;
+      if (splashPool[sBase + 5] === 0 || splashPool[sBase + 2] >= 1) continue;
+      splashPool[sBase + 2] = Math.min(1, splashPool[sBase + 2] + dt * splashPool[sBase + 3]);
+      if (splashPool[sBase + 2] < 1) splashState.active = true;
+    }
+  }
 
   for (let i = 0; i < count; i++) {
     const base = i * PARTICLE_STRIDE;
@@ -132,14 +143,24 @@ function updatePool(
     y += vy * dt;
 
     if (settings.splashes && prevY < height && y >= height && visibility[i] > 0.05) {
-      const sBase = splashState.head * SPLASH_STRIDE;
-      splashState.head = (splashState.head + 1) % maxSplashes;
-      splashPool[sBase] = x;
-      splashPool[sBase + 1] = height;
-      splashPool[sBase + 2] = 0; // progress
-      splashPool[sBase + 3] = 1 / (0.12 + depth * 0.08); // speed (duration ~0.12s to 0.20s)
-      splashPool[sBase + 4] = (2.5 + depth * 4.5) * Math.max(0.4, Math.min(3, settings.dropThickness));
-      splashPool[sBase + 5] = (0.25 + depth * 0.45) * visibility[i];
+      const elapsed = (y - height) / vy;
+      const impactX = x - vx * elapsed;
+      if (impactX >= 0 && impactX <= width) {
+        const sBase = splashState.head * SPLASH_STRIDE;
+        splashState.head = (splashState.head + 1) % maxSplashes;
+        // At capacity, skip extra impacts rather than cutting an active splash short.
+        if (splashPool[sBase + 5] === 0 || splashPool[sBase + 2] >= 1) {
+          const duration = 0.3 + depth * 0.18;
+          splashState.active = true;
+          splashPool[sBase] = impactX;
+          splashPool[sBase + 1] = Math.max(-40, Math.min(40, vx * 0.04)); // impact momentum
+          splashPool[sBase + 2] = elapsed / duration; // progress since crossing the edge
+          splashPool[sBase + 3] = 1 / duration;
+          splashPool[sBase + 4] = (2.8 + depth * 4.6) * Math.sqrt(Math.max(0.4, Math.min(3, settings.dropThickness)));
+          splashPool[sBase + 5] = (0.25 + depth * 0.45) * visibility[i];
+          splashPool[sBase + 6] = (depth + i * 0.618) % 1; // stable variation; no redraw randomness
+        }
+      }
     }
 
     // Re-enter from the upwind side at the same height, outside the visible canvas.
@@ -154,15 +175,6 @@ function updatePool(
       pool[base + 1] = y;
       pool[base + 2] = vx;
       pool[base + 3] = vy;
-    }
-  }
-
-  if (settings.splashes && dt > 0) {
-    for (let s = 0; s < maxSplashes; s++) {
-      const sBase = s * SPLASH_STRIDE;
-      if (splashPool[sBase + 2] < 1) {
-        splashPool[sBase + 2] += dt * splashPool[sBase + 3];
-      }
     }
   }
 }
@@ -210,46 +222,45 @@ function drawPool(
 
   if (settings.splashes) {
     ctx.fillStyle = settings.color;
-    const angleRad = (settings.angle * Math.PI) / 180;
-    const sinAngle = Math.sin(angleRad);
+    const thickness = Math.max(0.4, Math.min(3, settings.dropThickness));
 
     for (let s = 0; s < maxSplashes; s++) {
       const sBase = s * SPLASH_STRIDE;
       const progress = splashPool[sBase + 2];
-      if (progress >= 1 || progress <= 0) continue;
+      if (progress >= 1 || splashPool[sBase + 5] === 0) continue;
 
       const x = splashPool[sBase];
-      const y = splashPool[sBase + 1];
+      const y = state.height;
       const size = splashPool[sBase + 4];
-      const alpha = splashPool[sBase + 5] * (1 - progress);
-      if (alpha <= 0.01) continue;
+      const alpha = splashPool[sBase + 5];
+      const elapsed = progress / splashPool[sBase + 3];
+      const drift = splashPool[sBase + 1] * elapsed;
 
-      ctx.globalAlpha = alpha;
-      ctx.lineWidth = Math.max(0.4, 0.8 * settings.dropThickness * (1 - progress * 0.5));
+      ctx.globalAlpha = alpha * 0.45 * Math.pow(1 - progress, 1.5);
+      ctx.lineWidth = Math.max(0.35, 0.6 * thickness * (1 - progress * 0.4));
 
-      // Ground ripple crescent (curving upwards along bottom edge)
-      const rx = size * (0.6 + progress * 1.4);
-      const ry = rx * 0.35;
+      // A shallow ground ripple expands quickly, then slows as it dissipates.
+      const rx = size * (0.25 + 1.9 * (1 - Math.pow(1 - progress, 3)));
+      const ry = Math.max(0.25, rx * 0.19);
       ctx.beginPath();
       ctx.ellipse(x, y, rx, ry, 0, Math.PI, Math.PI * 2);
       ctx.stroke();
 
-      // Splash beads leaping upward in a parabolic bounce
-      const arc = Math.sin(progress * Math.PI);
-      const dotR = Math.max(0.3, 0.9 * settings.dropThickness * (1 - progress * 0.6));
-
-      const leftX = x - rx * 0.85 + sinAngle * 4 * progress;
-      const leftY = y - size * 1.6 * arc;
-      const rightX = x + rx * 0.85 + sinAngle * 4 * progress;
-      const rightY = y - size * 1.4 * arc;
-      const midX = x + sinAngle * 6 * progress;
-      const midY = y - size * 2.2 * arc;
-
-      ctx.beginPath();
-      ctx.arc(leftX, leftY, dotR, 0, Math.PI * 2);
-      ctx.arc(rightX, rightY, dotR, 0, Math.PI * 2);
-      ctx.arc(midX, midY, dotR, 0, Math.PI * 2);
-      ctx.fill();
+      // Each bead has its own ballistic arc and landing time, rather than one rigid bounce.
+      for (let bead = 0; bead < 5; bead++) {
+        const variation = (splashPool[sBase + 6] + bead * 0.37) % 1;
+        const beadProgress = progress / (0.72 + variation * 0.28);
+        if (beadProgress >= 1) continue;
+        const direction = (bead - 2) * 0.5;
+        const peak = size * (0.9 + (1 - Math.abs(direction)) * 1.1 + variation * 0.4);
+        const beadX = x + drift + direction * size * (1.5 + variation * 0.7) * beadProgress;
+        const beadY = y - peak * 4 * beadProgress * (1 - beadProgress);
+        const radius = Math.max(0.3, (0.4 + thickness * 0.35) * (1 - beadProgress * 0.45));
+        ctx.globalAlpha = alpha * Math.pow(1 - beadProgress, 1.25);
+        ctx.beginPath();
+        ctx.arc(beadX, beadY, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
   }
 
@@ -325,7 +336,7 @@ export function Rain({
     let initializedCount = 0;
     const maxSplashes = Math.min(128, Math.max(32, Math.round(capacity * 0.5)));
     const splashPool = new Float32Array(maxSplashes * SPLASH_STRIDE);
-    const splashState = { head: 0 };
+    const splashState = { head: 0, active: false };
 
     const unregister = ticker.register(LAYER.MIDGROUND, (state) => {
       const settings = settingsRef.current;

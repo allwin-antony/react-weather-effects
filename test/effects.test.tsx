@@ -855,4 +855,206 @@ describe('Weather Effects', () => {
     const splashY = ellipses.mock.calls[0][1];
     expect(splashY).toBe(frame.height);
   });
+
+  it.each([-45, 45])('places Rain splashes at the actual edge crossing for angle %s, without skipping the initial motion', (angle) => {
+    const { ctx, frame, random, ticker, draw } = createEffectHarness(1);
+    random.mockImplementation(() => 0.5);
+    frame.height = 100;
+    const ellipses = vi.spyOn(ctx, 'ellipse');
+    const arcs = vi.spyOn(ctx, 'arc');
+    render(
+      <TickerCtx.Provider value={ticker}>
+        <Rain intensity={1} angle={angle} splashes />
+      </TickerCtx.Provider>,
+    );
+    act(draw);
+    frame.dt = 0.1;
+    act(draw);
+
+    expect(ellipses).toHaveBeenCalledTimes(1);
+    const expectedX = frame.width / 2 + Math.sign(angle) * 50;
+    expect(ellipses.mock.calls[0][0]).toBeCloseTo(expectedX, 3);
+    const elapsed = 0.1 - 50 / (875 * Math.cos(Math.PI / 4));
+    const progress = elapsed / 0.39;
+    const radius = 5.1 * (0.25 + 1.9 * (1 - (1 - progress) ** 3));
+    expect(ellipses.mock.calls[0][2]).toBeCloseTo(radius, 3);
+    expect(arcs).toHaveBeenCalledTimes(5);
+  });
+
+  it('animates varied Rain splash droplets rising and falling while the ripple expands and fades', () => {
+    const { ctx, frame, random, ticker, draw } = createEffectHarness(1);
+    random.mockImplementation(() => 0.5);
+    frame.height = 100;
+    const ellipses = vi.spyOn(ctx, 'ellipse');
+    const arcs = vi.spyOn(ctx, 'arc');
+    const fills = vi.spyOn(ctx, 'fill');
+    const alphas: number[] = [];
+    vi.spyOn(ctx, 'stroke').mockImplementation(() => { alphas.push(ctx.globalAlpha); });
+    const scene = (intensity: number) => (
+      <TickerCtx.Provider value={ticker}><Rain intensity={intensity} angle={0} splashes /></TickerCtx.Provider>
+    );
+    const { rerender } = render(scene(1));
+    act(draw);
+    frame.dt = 0.06;
+    act(draw);
+    rerender(scene(0));
+
+    const sample = (dt: number) => {
+      ellipses.mockClear();
+      arcs.mockClear();
+      fills.mockClear();
+      alphas.length = 0;
+      frame.dt = dt;
+      act(draw);
+      return { ripple: ellipses.mock.calls[0], droplets: [...arcs.mock.calls], alpha: alphas[0] };
+    };
+    const rising = sample(0.08);
+    const peak = sample(0.1);
+    const falling = sample(0.1);
+    expect(rising.droplets).toHaveLength(5);
+    expect(peak.droplets).toHaveLength(5);
+    expect(falling.droplets).toHaveLength(5);
+    expect(new Set(peak.droplets.map((drop) => drop[1])).size).toBe(5);
+    expect(peak.droplets[0][1]).toBeLessThan(rising.droplets[0][1]);
+    expect(falling.droplets[0][1]).toBeGreaterThan(peak.droplets[0][1]);
+    expect(peak.ripple[2]).toBeGreaterThan(rising.ripple[2]);
+    expect(falling.ripple[2]).toBeGreaterThan(peak.ripple[2]);
+    expect(falling.ripple[3]).toBeLessThan(falling.ripple[2] * 0.25);
+    expect(falling.alpha).toBeLessThan(peak.alpha);
+    expect(fills).toHaveBeenCalledTimes(5);
+
+    expect(sample(0.1).ripple).toBeDefined();
+    expect(sample(0.02).ripple).toBeUndefined();
+    expect(arcs).not.toHaveBeenCalled();
+    expect(ctx.globalAlpha).toBe(1);
+  });
+
+  it('redraws Rain splashes at dt=0 without advancing motion or consuming randomness', () => {
+    const { ctx, frame, random, ticker, draw } = createEffectHarness(1);
+    random.mockImplementation(() => 0.5);
+    frame.height = 100;
+    const ellipses = vi.spyOn(ctx, 'ellipse');
+    const arcs = vi.spyOn(ctx, 'arc');
+    render(<TickerCtx.Provider value={ticker}><Rain intensity={1} angle={0} splashes /></TickerCtx.Provider>);
+    act(draw);
+    frame.dt = 0.06;
+    act(draw);
+    const ripple = [...ellipses.mock.calls];
+    const droplets = [...arcs.mock.calls];
+    expect(droplets.length).toBeGreaterThan(0);
+    random.mockClear();
+    frame.dt = 0;
+    for (let i = 0; i < 2; i++) {
+      ellipses.mockClear();
+      arcs.mockClear();
+      act(draw);
+      expect(ellipses.mock.calls).toEqual(ripple);
+      expect(arcs.mock.calls).toEqual(droplets);
+    }
+    expect(random).not.toHaveBeenCalled();
+  });
+
+  it.each([0, 1])('skips Rain splashes for offscreen edge crossings (x seed %s)', (xSeed) => {
+    const { ctx, frame, random, ticker, draw } = createEffectHarness(1);
+    const values = [0.5, xSeed, 0.5];
+    let index = 0;
+    random.mockImplementation(() => values[index++ % values.length]);
+    frame.height = 100;
+    const ellipses = vi.spyOn(ctx, 'ellipse');
+    const arcs = vi.spyOn(ctx, 'arc');
+    render(<TickerCtx.Provider value={ticker}><Rain intensity={1} angle={0} splashes /></TickerCtx.Provider>);
+    act(draw);
+    frame.dt = 0.1;
+    act(draw);
+    expect(ellipses).not.toHaveBeenCalled();
+    expect(arcs).not.toHaveBeenCalled();
+  });
+
+  it('keeps live Rain splashes anchored to the bottom edge after resize', () => {
+    const { ctx, frame, random, ticker, draw } = createEffectHarness(1);
+    random.mockImplementation(() => 0.5);
+    frame.height = 100;
+    const ellipses = vi.spyOn(ctx, 'ellipse');
+    const arcs = vi.spyOn(ctx, 'arc');
+    render(<TickerCtx.Provider value={ticker}><Rain intensity={1} angle={0} splashes /></TickerCtx.Provider>);
+    act(draw);
+    frame.dt = 0.06;
+    act(draw);
+    const droplets = [...arcs.mock.calls];
+    ellipses.mockClear();
+    arcs.mockClear();
+    random.mockClear();
+    frame.height = 200;
+    frame.dt = 0;
+    act(draw);
+    expect(ellipses.mock.calls[0][1]).toBe(200);
+    arcs.mock.calls.forEach((drop, i) => {
+      expect(drop[0]).toBe(droplets[i][0]);
+      expect(drop[1]).toBeCloseTo(droplets[i][1] + 100);
+    });
+    expect(random).not.toHaveBeenCalled();
+  });
+
+  it('lets disabled Rain splashes expire instead of replaying stale impacts when re-enabled', () => {
+    const { ctx, frame, random, ticker, draw } = createEffectHarness(1);
+    random.mockImplementation(() => 0.5);
+    frame.height = 100;
+    const ellipses = vi.spyOn(ctx, 'ellipse');
+    const scene = (intensity: number, splashes: boolean) => (
+      <TickerCtx.Provider value={ticker}><Rain intensity={intensity} angle={0} splashes={splashes} /></TickerCtx.Provider>
+    );
+    const { rerender } = render(scene(1, true));
+    act(draw);
+    frame.dt = 0.06;
+    act(draw);
+    expect(ellipses).toHaveBeenCalled();
+    rerender(scene(0, false));
+    frame.dt = 0.1;
+    for (let i = 0; i < 5; i++) act(draw);
+    rerender(scene(0, true));
+    ellipses.mockClear();
+    frame.dt = 0;
+    act(draw);
+    expect(ellipses).not.toHaveBeenCalled();
+  });
+
+  it('bounds Rain splash drawing even when hundreds of raindrops hit the edge together', () => {
+    const { ctx, frame, random, ticker, draw } = createEffectHarness(600);
+    random.mockImplementation(() => 0.5);
+    frame.height = 100;
+    const ellipses = vi.spyOn(ctx, 'ellipse');
+    const arcs = vi.spyOn(ctx, 'arc');
+    render(<TickerCtx.Provider value={ticker}><Rain intensity={1} angle={0} splashes /></TickerCtx.Provider>);
+    act(draw);
+    frame.dt = 0.1;
+    act(draw);
+    expect(ellipses).toHaveBeenCalledTimes(128);
+    expect(arcs).toHaveBeenCalledTimes(128 * 5);
+  });
+
+  it('keeps active Rain splashes alive instead of overwriting them when the pool is full', () => {
+    const { ctx, frame, random, ticker, draw } = createEffectHarness(64);
+    let index = 0;
+    random.mockImplementation(() => {
+      const particle = Math.floor(index / 3);
+      const field = index++ % 3;
+      if (particle >= 64 || field === 0) return 0.5;
+      if (field === 1) return particle < 32 ? 0.25 : 0.75;
+      return particle < 32 ? 0.5 : 0;
+    });
+    frame.height = 100;
+    const ellipses = vi.spyOn(ctx, 'ellipse');
+    render(<TickerCtx.Provider value={ticker}><Rain intensity={1} angle={0} splashes /></TickerCtx.Provider>);
+    act(draw);
+    frame.dt = 0.06;
+    act(draw);
+    expect(ellipses).toHaveBeenCalledTimes(32);
+    const positions = ellipses.mock.calls.map((ripple) => ripple[0]);
+    frame.dt = 0.1;
+    act(draw);
+    ellipses.mockClear();
+    frame.dt = 0.05;
+    act(draw);
+    expect(ellipses.mock.calls.map((ripple) => ripple[0])).toEqual(positions);
+  });
 });

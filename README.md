@@ -265,6 +265,8 @@ Wind is an effect-specific input, not a velocity in pixels per second. Rain and 
 | `splashes` | `boolean` | `false` | Enable animated bottom-edge splashes for contained cards or heroes. Alias: `splash`. |
 | `color` | `string` | `'rgba(190, 215, 245, 0.8)'` | CSS color for rain trails and splashes. |
 
+With `splashes`, visible drops produce small, varied droplets that rise and fall over a softly expanding ground ripple. Splash size follows `dropThickness`; existing impacts finish their short animation when rain stops. Under heavy rain, excess impacts are skipped instead of restarting active splashes. Splashes stay at the current canvas bottom edge after resizing, and paused/static redraws preserve their state. Use contained mode for a defined ground edge; splashes do not detect other DOM surfaces.
+
 ### `Snow`
 
 | Prop | Type | Default | Description |
