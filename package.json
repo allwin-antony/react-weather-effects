@@ -18,6 +18,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc -b",
     "size": "size-limit",
+    "publish:pkg": "pnpm --filter react-weather-effects publish --access public --no-git-checks",
     "demo": "pnpm --filter weather-effects-demo dev"
   },
   "devDependencies": {
