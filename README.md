@@ -3,12 +3,12 @@
 Composable, high-performance rain, snow, and fog visual effects for React, rendered on a single lightweight 2D canvas.
 
 [![npm version](https://img.shields.io/npm/v/react-weather-effects.svg)](https://www.npmjs.com/package/react-weather-effects)
-[![Live Demo](https://img.shields.io/badge/Demo-Live%20Playground-0070f3?logo=vercel)](https://react-weather-effects-qupg8d9yn.vercel.app/)
+[![Live Demo](https://img.shields.io/badge/Demo-Live%20Playground-0070f3?logo=vercel)](https://react-weather-effects-smoky.vercel.app/)
 [![GitHub](https://img.shields.io/badge/GitHub-Repository-181717?logo=github)](https://github.com/allwin-antony/react-weather-effects)
 [![Sponsor](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=githubsponsors)](https://github.com/sponsors/allwin-antony)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-- **Live Demo:** [https://react-weather-effects-qupg8d9yn.vercel.app/](https://react-weather-effects-qupg8d9yn.vercel.app/)
+- **Live Demo:** [https://react-weather-effects-smoky.vercel.app/](https://react-weather-effects-smoky.vercel.app/)
 - **GitHub:** [https://github.com/allwin-antony/react-weather-effects](https://github.com/allwin-antony/react-weather-effects)
 - **npm:** [https://www.npmjs.com/package/react-weather-effects](https://www.npmjs.com/package/react-weather-effects)
 - **Sponsor:** [https://github.com/sponsors/allwin-antony](https://github.com/sponsors/allwin-antony)
