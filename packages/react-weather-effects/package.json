@@ -2,7 +2,17 @@
   "name": "react-weather-effects",
   "version": "0.1.0-beta.0",
   "description": "Lightweight, composable 2D canvas weather visual effects for React",
+  "author": "Allwin Antony",
   "license": "MIT",
+  "homepage": "https://github.com/allwin-antony/react-weather-effects#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/allwin-antony/react-weather-effects.git",
+    "directory": "packages/react-weather-effects"
+  },
+  "bugs": {
+    "url": "https://github.com/allwin-antony/react-weather-effects/issues"
+  },
   "keywords": [
     "react",
     "weather",
@@ -41,7 +51,8 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsup && node -e \"const fs=require('fs'); if(fs.existsSync('dist/index.d.ts')) fs.copyFileSync('dist/index.d.ts', 'dist/index.d.mts');\"",

@@ -1,8 +1,19 @@
 {
   "name": "react-weather-effects-monorepo",
   "private": true,
+  "author": "Allwin Antony",
+  "license": "MIT",
+  "homepage": "https://github.com/allwin-antony/react-weather-effects#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/allwin-antony/react-weather-effects.git"
+  },
+  "bugs": {
+    "url": "https://github.com/allwin-antony/react-weather-effects/issues"
+  },
   "scripts": {
     "build": "pnpm --filter @react-weather-effects/core build && pnpm --filter @react-weather-effects/effects build && pnpm --filter react-weather-effects build",
+    "build:demo": "pnpm --filter weather-effects-demo build",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -b",

@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prebuild": "pnpm -w build",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
