@@ -204,7 +204,7 @@ Pass a **URL string**, not an SVG React component or raw SVG markup. PNG, SVG, a
 
 For remote images, the image server must allow anonymous cross-origin requests with an appropriate `Access-Control-Allow-Origin` header. Serving artwork from your own application is the simplest option.
 
-`wobble={false}` disables the animated sway and gentle sprite rotation. Wind can still move the flakes. There is no separate `rotation` prop in the current API.
+`wobble={false}` disables animated sideways sway and fall flutter. You can control sprite rotation separately with `rotation` (set `false` to let custom sprites drift upright without rotating, or `true` with `wobble={false}` to rotate without swaying) and adjust the spinning rate with `rotationSpeed` (multiplier, default `1`; set `0` to freeze rotation).
 
 ### Pause and resume a scene
 
@@ -273,7 +273,9 @@ Wind is an effect-specific input, not a velocity in pixels per second. Rain and 
 | `sprite` | `string` | None | Static image URL. Omitting it uses soft, built-in snowflakes. |
 | `minSize` | `number` | `1.5`, or `6` with a sprite | Minimum flake radius in CSS pixels. |
 | `maxSize` | `number` | `4`, or `18` with a sprite | Maximum flake radius in CSS pixels. |
-| `wobble` | `boolean` | `true` | Enable animated sway and gentle sprite rotation. |
+| `wobble` | `boolean` | `true` | Enable animated sideways sway and fall flutter. |
+| `rotation` | `boolean` | `true` (or `wobble`) | Enable sprite rotation/spinning. Defaults to `wobble`. Set `false` to drift without rotating. |
+| `rotationSpeed` | `number` | `1` | Multiplier for sprite rotation/spinning speed. Defaults to `1`. Set to `0` to freeze angle. |
 
 Use nonnegative sizes, with `minSize <= maxSize`. Built-in flakes have a feathered glow that extends beyond their nominal radius.
 

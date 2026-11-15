@@ -127,6 +127,8 @@ export function App() {
   const [snowIntensity, setSnowIntensity] = useState(0.5);
   const [snowSpeed, setSnowSpeed] = useState(0.85);
   const [snowWobble, setSnowWobble] = useState(true);
+  const [snowRotation, setSnowRotation] = useState(true);
+  const [snowRotationSpeed, setSnowRotationSpeed] = useState(1);
   const [snowSprite, setSnowSprite] = useState<SpriteChoice>('watercolor');
   const [snowMinSize, setSnowMinSize] = useState(8);
   const [snowMaxSize, setSnowMaxSize] = useState(22);
@@ -242,6 +244,8 @@ export function App() {
         transitionDuration={transitionDuration}
         speed={snowSpeed}
         wobble={snowWobble}
+        rotation={snowRotation}
+        rotationSpeed={snowRotationSpeed}
         sprite={spriteUrl}
         minSize={snowMinSize}
         maxSize={snowMaxSize}
@@ -575,7 +579,11 @@ export function App() {
             <Slider label="Speed" value={snowSpeed} min={0} max={2.5} step={0.05} format={x2} onChange={setSnowSpeed} />
             <Slider label="Min size (px)" value={snowMinSize} min={0.5} max={30} step={0.5} format={x1} onChange={setSnowMinSize} />
             <Slider label="Max size (px)" value={snowMaxSize} min={1} max={40} step={0.5} format={x1} onChange={setSnowMaxSize} />
-            <Toggle label="Wobble & rotation" checked={snowWobble} onChange={setSnowWobble} />
+            <Toggle label="Wobble (sway)" checked={snowWobble} onChange={setSnowWobble} />
+            <Toggle label="Rotation (spin)" checked={snowRotation} onChange={setSnowRotation} />
+            {snowRotation && (
+              <Slider label="Rotation speed" value={snowRotationSpeed} min={0} max={3} step={0.1} format={x2} onChange={setSnowRotationSpeed} />
+            )}
           </Section>
 
           {/* ---- Rain ---- */}

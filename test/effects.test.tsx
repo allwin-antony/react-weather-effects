@@ -696,4 +696,102 @@ describe('Weather Effects', () => {
     expect(random).not.toHaveBeenCalled();
     expect(ctx.globalAlpha).toBe(1);
   });
+
+  it('controls Snow sprite rotation independently from sideways wobble and respects rotationSpeed', async () => {
+    const { ctx, frame, random, ticker, draw } = createEffectHarness(4);
+    random.mockImplementation(() => 0.5);
+    const image = document.createElement('img');
+    Object.defineProperties(image, {
+      naturalWidth: { value: 100 }, naturalHeight: { value: 100 },
+    });
+    vi.spyOn(globalThis, 'Image').mockImplementation(function () { return image; });
+    const track = vi.spyOn(ticker, 'trackAsset');
+    const rotates = vi.spyOn(ctx, 'rotate');
+    const translates = vi.spyOn(ctx, 'translate');
+
+    // 1. Drift without rotating: wobble={true}, rotation={false}
+    const { rerender } = render(
+      <TickerCtx.Provider value={ticker}>
+        <Snow sprite="/flake.png" intensity={0.5} wobble={true} rotation={false} />
+      </TickerCtx.Provider>,
+    );
+    await act(async () => {
+      image.dispatchEvent(new Event('load'));
+      await track.mock.calls[0][0];
+    });
+
+    frame.dt = 0.05;
+    act(draw);
+    expect(translates).toHaveBeenCalled();
+    expect(rotates).not.toHaveBeenCalled();
+
+    // 2. Rotate without swaying: wobble={false}, rotation={true}
+    rerender(
+      <TickerCtx.Provider value={ticker}>
+        <Snow sprite="/flake.png" intensity={0.5} wobble={false} rotation={true} />
+      </TickerCtx.Provider>,
+    );
+    translates.mockClear();
+    rotates.mockClear();
+    frame.dt = 0.05;
+    act(draw);
+    expect(translates).toHaveBeenCalled();
+    expect(rotates).toHaveBeenCalled();
+    const angle1 = rotates.mock.calls[0][0];
+
+    // Advance frame and measure rotation progression
+    rotates.mockClear();
+    frame.dt = 0.1;
+    act(draw);
+    const angle2 = rotates.mock.calls[0][0];
+    const deltaNormal = Math.abs(angle2 - angle1);
+    expect(deltaNormal).toBeGreaterThan(0);
+
+    // 3. Double rotation speed: rotationSpeed={2}
+    rerender(
+      <TickerCtx.Provider value={ticker}>
+        <Snow sprite="/flake.png" intensity={0.5} wobble={false} rotation={true} rotationSpeed={2} />
+      </TickerCtx.Provider>,
+    );
+    rotates.mockClear();
+    frame.dt = 0.1;
+    act(draw);
+    const angle3 = rotates.mock.calls[0][0];
+    const deltaFast = Math.abs(angle3 - angle2);
+    expect(deltaFast).toBeCloseTo(deltaNormal * 2, 4);
+
+    // 4. Freeze rotation: rotationSpeed={0}
+    rerender(
+      <TickerCtx.Provider value={ticker}>
+        <Snow sprite="/flake.png" intensity={0.5} wobble={false} rotation={true} rotationSpeed={0} />
+      </TickerCtx.Provider>,
+    );
+    rotates.mockClear();
+    frame.dt = 0.1;
+    act(draw);
+    const angle4 = rotates.mock.calls[0][0];
+    expect(angle4).toBeCloseTo(angle3, 4);
+
+    // 5. Default inheritance: wobble={false} without rotation prop disables rotation
+    rerender(
+      <TickerCtx.Provider value={ticker}>
+        <Snow sprite="/flake.png" intensity={0.5} wobble={false} />
+      </TickerCtx.Provider>,
+    );
+    rotates.mockClear();
+    frame.dt = 0.1;
+    act(draw);
+    expect(rotates).not.toHaveBeenCalled();
+
+    // 6. Default inheritance: rotationSpeed without rotation prop enables rotation
+    rerender(
+      <TickerCtx.Provider value={ticker}>
+        <Snow sprite="/flake.png" intensity={0.5} wobble={false} rotationSpeed={1.5} />
+      </TickerCtx.Provider>,
+    );
+    rotates.mockClear();
+    frame.dt = 0.1;
+    act(draw);
+    expect(rotates).toHaveBeenCalled();
+  });
 });
