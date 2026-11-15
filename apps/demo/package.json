@@ -1,5 +1,5 @@
 {
-  "name": "weather-overlays-demo",
+  "name": "weather-effects-demo",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,7 +10,7 @@
   "dependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-weather-overlays": "workspace:*"
+    "react-weather-effects": "workspace:*"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",

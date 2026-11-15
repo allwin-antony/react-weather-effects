@@ -6,7 +6,7 @@ import {
   LAYER,
   PARTICLE_STRIDE,
   TickerCtx,
-} from '@react-weather-overlays/core';
+} from '@react-weather-effects/core';
 
 export interface RainProps {
   intensity?: number;

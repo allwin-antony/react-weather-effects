@@ -1,4 +1,4 @@
-# `react-weather-overlays` — Architecture & Build Plan (v4 — Implementation Contracts)
+# `react-weather-effects` — Architecture & Build Plan (v4 — Implementation Contracts)
 
 > A unified, zero-config-by-default React library for composable weather effects.
 > Target: **< 5kB gzipped core**, tree-shakeable, SSR-safe, accessible.
@@ -8,11 +8,11 @@
 ## 📦 Package Structure
 
 ```
-react-weather-overlays/           ← monorepo root (pnpm workspaces)
+react-weather-effects/            ← monorepo root (pnpm workspaces)
 ├── packages/
 │   ├── core/                     ← INTERNAL: WeatherCanvas engine, ticker, pool, hooks
 │   ├── effects/                  ← INTERNAL: Rain, Snow, Fog, Lightning, Wind, Hail, Sandstorm, Clouds
-│   ├── react-weather-overlays/   ← PUBLISHED: thin entry — re-exports core + effects
+│   ├── react-weather-effects/    ← PUBLISHED: thin entry — re-exports core + effects
 │   └── wmo/                      ← PUBLISHED separately: fromWMOCode() preset mapper
 ├── apps/
 │   └── storybook/                ← visual QA, deterministic scenes, Chromatic CI
@@ -22,9 +22,9 @@ react-weather-overlays/           ← monorepo root (pnpm workspaces)
 ```
 
 > [!IMPORTANT]
-> **Publishing strategy for v0.1:** Only `react-weather-overlays` is published to npm. `core` and `effects` are internal workspace packages — not independently versioned or published. This eliminates cross-package version synchronization complexity. The WMO mapper ships separately as `@react-weather-overlays/wmo` when ready (post-v0.1).
+> **Publishing strategy for v0.1:** Only `react-weather-effects` is published to npm. `core` and `effects` are internal workspace packages — not independently versioned or published. This eliminates cross-package version synchronization complexity. The WMO mapper ships separately as `@react-weather-effects/wmo` when ready (post-v0.1).
 
-Name the internal packages `@react-weather-overlays/core` and `@react-weather-overlays/effects`, with `"private": true`. Their runtime code and public-facing declarations must be bundled into the published package; an installed consumer must never need to resolve either private package. Internal effects retain an external dependency on core during their own build; the public package bundles both together so every effect uses the same `TickerCtx` instance.
+Name the internal packages `@react-weather-effects/core` and `@react-weather-effects/effects`, with `"private": true`. Their runtime code and public-facing declarations must be bundled into the published package; an installed consumer must never need to resolve either private package. Internal effects retain an external dependency on core during their own build; the public package bundles both together so every effect uses the same `TickerCtx` instance.
 
 ---
 
@@ -585,16 +585,16 @@ CSS `filter: blur()` on large DOM elements is measurably expensive on mobile Saf
 
 ```tsx
 // v0.1
-import { WeatherCanvas, Rain, Snow, Fog }  from 'react-weather-overlays';
+import { WeatherCanvas, Rain, Snow, Fog }  from 'react-weather-effects';
 
 // v0.2 additions
-import { Lightning, Wind, Clouds } from 'react-weather-overlays';
+import { Lightning, Wind, Clouds } from 'react-weather-effects';
 
 // v0.3 additions
-import { Hail, Sandstorm } from 'react-weather-overlays';
+import { Hail, Sandstorm } from 'react-weather-effects';
 
 // v1.0: separate optional subpackage
-import { fromWMOCode } from '@react-weather-overlays/wmo';
+import { fromWMOCode } from '@react-weather-effects/wmo';
 ```
 
 ### `<WeatherCanvas>` Props (v0.1)
@@ -647,7 +647,7 @@ Sizing belongs to the containing element; v0.1 does not expose a `style` prop. T
 > **Naming clarification:** This mapper does not fetch live weather data. It converts standard WMO weather interpretation codes into effect prop presets. Name: "WMO Weather Preset Mapping", not "Live Weather Integration".
 
 ```tsx
-import { fromWMOCode } from '@react-weather-overlays/wmo';
+import { fromWMOCode } from '@react-weather-effects/wmo';
 
 // WMO codes per Open-Meteo documentation:
 // 95  → Thunderstorm (no hail)
@@ -663,7 +663,7 @@ const result = fromWMOCode(999);
 ```
 
 **WMO mapper design rules:**
-- Ships as `@react-weather-overlays/wmo` — never bundled into core.
+- Ships as `@react-weather-effects/wmo` — never bundled into core.
 - Plain data + type-only imports from effect prop types. No runtime dependencies.
 - Covers the documented Open-Meteo WMO subset. List supported codes explicitly in README.
 - Returns `null` for unsupported codes — does not throw. Consumers check before spreading.
@@ -744,7 +744,7 @@ Implement `apps/storybook/src/testing/withWeatherCapture.tsx` with this lifecycl
 Storybook's source aliases must resolve the public entry and its private test context to the same core module instance. Separate packed-consumer checks exercise the shipped package without these aliases or test helpers.
 
 ```tsx
-import { WeatherCanvas, Rain } from 'react-weather-overlays';
+import { WeatherCanvas, Rain } from 'react-weather-effects';
 import { withWeatherCapture, waitForWeatherCapture } from './testing/withWeatherCapture';
 
 export const RainStory = {
@@ -784,7 +784,7 @@ The v0.1 configuration gates **core alone** at 5 kB and reports Rain/Big-3 compo
 [
   {
     "name": "Core",
-    "path": "packages/react-weather-overlays/dist/index.mjs",
+    "path": "packages/react-weather-effects/dist/index.mjs",
     "import": "{ WeatherCanvas }",
     "limit": "5 kB",
     "gzip": true,
@@ -792,14 +792,14 @@ The v0.1 configuration gates **core alone** at 5 kB and reports Rain/Big-3 compo
   },
   {
     "name": "Core + Rain (baseline)",
-    "path": "packages/react-weather-overlays/dist/index.mjs",
+    "path": "packages/react-weather-effects/dist/index.mjs",
     "import": "{ WeatherCanvas, Rain }",
     "gzip": true,
     "ignore": ["react", "react/jsx-runtime", "react/jsx-dev-runtime"]
   },
   {
     "name": "v0.1 Big 3 (baseline)",
-    "path": "packages/react-weather-overlays/dist/index.mjs",
+    "path": "packages/react-weather-effects/dist/index.mjs",
     "import": "{ WeatherCanvas, Rain, Snow, Fog }",
     "gzip": true,
     "ignore": ["react", "react/jsx-runtime", "react/jsx-dev-runtime"]
@@ -812,7 +812,7 @@ When all eight effects ship in v0.3, add this separate gate. Earlier release che
 ```json
 {
   "name": "Core + all 8 effects",
-  "path": "packages/react-weather-overlays/dist/index.mjs",
+  "path": "packages/react-weather-effects/dist/index.mjs",
   "import": "{ WeatherCanvas, Rain, Snow, Fog, Lightning, Wind, Hail, Sandstorm, Clouds }",
   "limit": "12 kB",
   "gzip": true,
@@ -836,11 +836,11 @@ Verify with minimal consumers of the packed public package:
 
 ## 📦 Publishing & Package Config
 
-`packages/react-weather-overlays/package.json`:
+`packages/react-weather-effects/package.json`:
 
 ```json
 {
-  "name": "react-weather-overlays",
+  "name": "react-weather-effects",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -850,8 +850,8 @@ Verify with minimal consumers of the packed public package:
     "react": ">=18"
   },
   "devDependencies": {
-    "@react-weather-overlays/core": "workspace:*",
-    "@react-weather-overlays/effects": "workspace:*"
+    "@react-weather-effects/core": "workspace:*",
+    "@react-weather-effects/effects": "workspace:*"
   },
   "sideEffects": false,
   "exports": {
@@ -908,7 +908,7 @@ export const libraryConfig: Options = {
   clean:     true,
   target:    'es2020',
   platform:  'browser',
-  external:  ['react', /^react\//, /^@react-weather-overlays\//],
+  external:  ['react', /^react\//, /^@react-weather-effects\//],
   outExtension: ({ format }) => ({
     js:  format === 'esm' ? '.mjs' : '.cjs',
     dts: format === 'esm' ? '.d.mts' : '.d.cts',
@@ -925,11 +925,11 @@ export default defineConfig(libraryConfig);
 ```
 
 ```ts
-// packages/react-weather-overlays/tsup.config.ts
+// packages/react-weather-effects/tsup.config.ts
 import { defineConfig } from 'tsup';
 import { libraryConfig } from '../../tsup.config.base';
 
-const internalPackages = [/^@react-weather-overlays\/(core|effects)(\/|$)/];
+const internalPackages = [/^@react-weather-effects\/(core|effects)(\/|$)/];
 
 export default defineConfig({
   ...libraryConfig,
@@ -994,7 +994,7 @@ flowchart LR
 - [ ] pnpm monorepo + `pnpm-workspace.yaml`
 - [ ] Private `packages/core` — `WeatherCanvas`, stable `TickerContext`, cached registry, `invalidate()`, pool growth helpers, PRNG, scheduler seam, asset tracking, auto-pause hooks, SSR guards, per-canvas budget
 - [ ] Private `packages/effects` — Rain/Snow/Fog with persistent settings/pools, meaningful static initialization, explicit invalidation, and texture cleanup/fallbacks
-- [ ] `packages/react-weather-overlays` — v0.1 re-exports, nested ESM/CJS type conditions, `sideEffects: false`, React peer, build-only workspace dependencies
+- [ ] `packages/react-weather-effects` — v0.1 re-exports, nested ESM/CJS type conditions, `sideEffects: false`, React peer, build-only workspace dependencies
 - [ ] Shared tsup config + per-package configs; facade `noExternal` and declaration resolution; explicit `.mjs`/`.cjs`/`.d.mts`/`.d.cts` output
 - [ ] `.size-limit.json` + CI: explicit gzip, excluded React peer runtime, core-only gate, Rain/Big-3 baselines
 - [ ] Packed-tarball checks: native ESM/CJS imports, TypeScript NodeNext/Bundler resolution, no unresolved private imports, shared ticker context

@@ -9,9 +9,9 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@react-weather-overlays/core': path.resolve(__dirname, 'packages/core/src'),
-      '@react-weather-overlays/effects': path.resolve(__dirname, 'packages/effects/src'),
-      'react-weather-overlays': path.resolve(__dirname, 'packages/react-weather-overlays/src'),
+      '@react-weather-effects/core': path.resolve(__dirname, 'packages/core/src'),
+      '@react-weather-effects/effects': path.resolve(__dirname, 'packages/effects/src'),
+      'react-weather-effects': path.resolve(__dirname, 'packages/react-weather-effects/src'),
     },
   },
 });

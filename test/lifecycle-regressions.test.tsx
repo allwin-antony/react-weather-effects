@@ -8,8 +8,8 @@ import {
   SchedulerCtx,
   type FrameScheduler,
   type Quality,
-} from '@react-weather-overlays/core';
-import { Rain, Snow, Fog } from '@react-weather-overlays/effects';
+} from '@react-weather-effects/core';
+import { Rain, Snow, Fog } from '@react-weather-effects/effects';
 
 class TestManualScheduler implements FrameScheduler {
   private nextId = 1;

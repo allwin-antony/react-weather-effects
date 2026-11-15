@@ -3,7 +3,7 @@ import {
   type FrameState,
   LAYER,
   TickerCtx,
-} from '@react-weather-overlays/core';
+} from '@react-weather-effects/core';
 
 export interface FogProps {
   density?: number;

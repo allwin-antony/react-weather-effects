@@ -10,7 +10,7 @@ export const libraryConfig: Options = {
   clean: true,
   target: 'es2020',
   platform: 'browser',
-  external: ['react', /^react\//, /^@react-weather-overlays\//],
+  external: ['react', /^react\//, /^@react-weather-effects\//],
   outExtension: ({ format }) => ({
     js: format === 'esm' ? '.mjs' : '.cjs',
     dts: format === 'esm' ? '.d.mts' : '.d.cts',

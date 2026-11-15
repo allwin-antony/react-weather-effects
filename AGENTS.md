@@ -96,11 +96,11 @@ flowchart TD
 
 ## 4. Repository Context & Architectural Constraints
 
-* **Project:** `react-weather-overlays` (monorepo managed with `pnpm`).
+* **Project:** `react-weather-effects` (monorepo managed with `pnpm`).
 * **Architecture Guide:** Refer to [ARCHITECTURE.md](file:///c:/Users/santo/Documents/weather-package/ARCHITECTURE.md) for full contracts.
 * **Core Rule:** Single 2D `<canvas>` element owned exclusively by `<WeatherCanvas>`. Never attach WebGL or transfer to workers on the main canvas.
 * **Package Boundaries:**
   - `packages/core`: Internal engine (Ticker, Canvas, Pool, Hooks).
   - `packages/effects`: Internal effect modules (`Rain`, `Snow`, `Fog`, `Lightning`, etc.).
-  - `packages/react-weather-overlays`: Public facing bundle aggregating core + effects.
+  - `packages/react-weather-effects`: Public facing bundle aggregating core + effects.
 * **Bundle Constraint:** Core engine target is **< 5kB gzipped**. Guard against large external dependencies.

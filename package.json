@@ -1,13 +1,13 @@
 {
-  "name": "react-weather-overlays-monorepo",
+  "name": "react-weather-effects-monorepo",
   "private": true,
   "scripts": {
-    "build": "pnpm --filter @react-weather-overlays/core build && pnpm --filter @react-weather-overlays/effects build && pnpm --filter react-weather-overlays build",
+    "build": "pnpm --filter @react-weather-effects/core build && pnpm --filter @react-weather-effects/effects build && pnpm --filter react-weather-effects build",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -b",
     "size": "size-limit",
-    "demo": "pnpm --filter weather-overlays-demo dev"
+    "demo": "pnpm --filter weather-effects-demo dev"
   },
   "devDependencies": {
     "@size-limit/esbuild": "^11.2.0",

@@ -1,5 +1,5 @@
 {
-  "name": "@react-weather-overlays/effects",
+  "name": "@react-weather-effects/effects",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -17,7 +17,7 @@
     "react": ">=18"
   },
   "dependencies": {
-    "@react-weather-overlays/core": "workspace:*"
+    "@react-weather-effects/core": "workspace:*"
   },
   "scripts": {
     "build": "tsup",

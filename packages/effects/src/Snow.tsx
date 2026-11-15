@@ -6,13 +6,16 @@ import {
   LAYER,
   PARTICLE_STRIDE,
   TickerCtx,
-} from '@react-weather-overlays/core';
+} from '@react-weather-effects/core';
 
 export interface SnowProps {
   intensity?: number;
   speed?: number;
   color?: string;
-  /** Image URL with original colors preserved. Remote images must allow CORS. */
+  /**
+   * Static image URL with original colors preserved. Remote images must allow CORS.
+   * Cached as a raster texture up to 1024px per side; animated images use a snapshot.
+   */
   sprite?: string;
   /** Radius in CSS pixels; defaults to 6 for sprites, 1.5 for built-in flakes. */
   minSize?: number;
@@ -28,6 +31,38 @@ interface SnowSettings {
   minSize: number;
   maxSize: number;
   wobble: boolean;
+}
+
+interface SnowSprite {
+  image: HTMLImageElement;
+  texture: HTMLCanvasElement;
+  aspect: number;
+  requestedSize: number;
+}
+
+function getSnowSpriteSize(settings: SnowSettings, dpr: number): number {
+  const diameter = Math.max(0, settings.minSize, settings.maxSize) * 2 * dpr;
+  // Buckets avoid tiny resize rebuilds; 1024 squared RGBA pixels need at most 4 MiB.
+  return Math.min(1024, Math.max(64, 2 ** Math.ceil(Math.log2(diameter || 1))));
+}
+
+function createSnowSprite(image: HTMLImageElement, size: number): SnowSprite | null {
+  if (typeof document === 'undefined') return null;
+
+  try {
+    const aspect = image.naturalWidth / image.naturalHeight;
+    const texture = document.createElement('canvas');
+    texture.width = Math.max(1, Math.ceil(size * Math.min(1, aspect)));
+    texture.height = Math.max(1, Math.ceil(size / Math.max(1, aspect)));
+    const ctx = texture.getContext('2d');
+    if (!ctx) return null;
+
+    // Render vectors and filters once, rather than for every flake on every frame.
+    ctx.drawImage(image, 0, 0, texture.width, texture.height);
+    return { image, texture, aspect, requestedSize: size };
+  } catch {
+    return null;
+  }
 }
 
 function createSnowTexture(color: string): HTMLCanvasElement | null {
@@ -160,12 +195,12 @@ function drawSnow(
   state: FrameState,
   settings: SnowSettings,
   texture: CanvasImageSource | null,
-  sprite: HTMLImageElement | null,
+  sprite: SnowSprite | null,
 ): void {
   if (count === 0) return;
 
   const ctx = state.ctx;
-  const aspect = sprite ? sprite.naturalWidth / sprite.naturalHeight : 1;
+  const aspect = sprite ? sprite.aspect : 1;
   ctx.fillStyle = settings.color;
 
   for (let i = 0; i < count; i++) {
@@ -185,7 +220,7 @@ function drawSnow(
       try {
         ctx.translate(x, y);
         if (settings.wobble) ctx.rotate(Math.sin(pool[base + 5]) * 0.35);
-        ctx.drawImage(sprite, -halfWidth, -halfHeight, halfWidth * 2, halfHeight * 2);
+        ctx.drawImage(sprite.texture, -halfWidth, -halfHeight, halfWidth * 2, halfHeight * 2);
       } finally {
         ctx.restore();
       }
@@ -226,7 +261,7 @@ export function Snow({
     wobble,
   });
   const textureRef = useRef<CanvasImageSource | null>(null);
-  const spriteRef = useRef<HTMLImageElement | null>(null);
+  const spriteRef = useRef<SnowSprite | null>(null);
 
   useEffect(() => {
     settingsRef.current = { intensity, speed, color, minSize, maxSize, wobble };
@@ -252,7 +287,10 @@ export function Snow({
       settle = resolve;
       image.onload = () => {
         if (isMounted && image.naturalWidth > 0 && image.naturalHeight > 0) {
-          spriteRef.current = image;
+          spriteRef.current = createSnowSprite(
+            image,
+            getSnowSpriteSize(settingsRef.current, ticker.getBudget().dpr),
+          );
           ticker.invalidate();
         }
         resolve();
@@ -291,6 +329,16 @@ export function Snow({
 
       if (state.dt > 0) {
         updateSnow(pool, count, state, settings);
+      }
+
+      const cachedSprite = spriteRef.current;
+      if (cachedSprite && count > 0) {
+        const size = getSnowSpriteSize(settings, state.dpr);
+        if (size > cachedSprite.requestedSize) {
+          // Remember failed upgrades too, so allocation failures aren't retried every frame.
+          cachedSprite.requestedSize = size;
+          spriteRef.current = createSnowSprite(cachedSprite.image, size) ?? cachedSprite;
+        }
       }
       drawSnow(pool, count, state, settings, textureRef.current, spriteRef.current);
     });

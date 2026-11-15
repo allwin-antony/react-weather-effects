@@ -6,7 +6,7 @@ import {
   Rain,
   Snow,
   Fog,
-} from 'react-weather-overlays';
+} from 'react-weather-effects';
 import {
   createSeededRandom,
   SchedulerCtx,
@@ -15,7 +15,7 @@ import {
   type FrameScheduler,
   type FrameState,
   type TickerContext,
-} from '@react-weather-overlays/core';
+} from '@react-weather-effects/core';
 
 class TestManualScheduler implements FrameScheduler {
   private nextId = 1;
@@ -318,7 +318,7 @@ describe('Weather Effects', () => {
     expect(images).not.toHaveBeenCalled();
   });
 
-  it('loads a Snow sprite once, preserves its aspect ratio and redraws without reseeding', async () => {
+  it.each(['/snowflake.png', '/crystal.svg', '/sprite?id=crystal'])('caches Snow sprite %s without reloading or reseeding', async (spriteUrl) => {
     const { ctx, random, ticker, draw } = createEffectHarness(4);
     random.mockImplementation(() => 0.5);
     const image = document.createElement('img');
@@ -332,11 +332,11 @@ describe('Weather Effects', () => {
     const positions = vi.spyOn(ctx, 'translate');
     const { rerender, unmount } = render(
       <TickerCtx.Provider value={ticker}>
-        <Snow sprite="/snowflake.png" intensity={1} minSize={10} maxSize={10} wobble={false} />
+        <Snow sprite={spriteUrl} intensity={1} minSize={10} maxSize={10} wobble={false} />
       </TickerCtx.Provider>,
     );
     expect(image.crossOrigin).toBe('anonymous');
-    expect(image.getAttribute('src')).toBe('/snowflake.png');
+    expect(image.getAttribute('src')).toBe(spriteUrl);
     expect(track).toHaveBeenCalledTimes(1);
     act(draw);
     const fallback = images.mock.calls[0];
@@ -349,7 +349,14 @@ describe('Weather Effects', () => {
     images.mockClear();
     random.mockClear();
     act(draw);
-    expect(images.mock.calls[0]).toEqual([image, -10, -5, 20, 10]);
+    const cached = images.mock.calls[0][0] as HTMLCanvasElement;
+    expect(cached).toBeInstanceOf(HTMLCanvasElement);
+    expect([cached.width, cached.height]).toEqual([64, 32]);
+    const rasterContext = cached.getContext('2d')!;
+    const rasterImages = vi.mocked(rasterContext.drawImage);
+    expect(rasterImages).toHaveBeenCalledExactlyOnceWith(image, 0, 0, 64, 32);
+    expect(rasterContext.globalCompositeOperation).toBe('source-over');
+    expect(images.mock.calls[0]).toEqual([cached, -10, -5, 20, 10]);
     expect(positions.mock.calls[0][0]).toBeCloseTo(fallback[1] + fallback[3] / 2);
     expect(positions.mock.calls[0][1]).toBeCloseTo(fallback[2] + fallback[4] / 2);
     expect(random).not.toHaveBeenCalled();
@@ -358,20 +365,166 @@ describe('Weather Effects', () => {
 
     rerender(
       <TickerCtx.Provider value={ticker}>
-        <Snow sprite="/snowflake.png" intensity={0.5} speed={2} color="blue" wobble={false} />
+        <Snow sprite={spriteUrl} intensity={0.5} speed={2} color="blue" wobble={false} />
       </TickerCtx.Provider>,
     );
     images.mockClear();
     act(draw);
     expect(imageFactory).toHaveBeenCalledTimes(1);
     expect(images).toHaveBeenCalledTimes(2);
-    expect(images.mock.calls[0][0]).toBe(image);
+    expect(images.mock.calls[0][0]).toBe(cached);
+    expect(rasterImages).toHaveBeenCalledTimes(1);
     expect(random).not.toHaveBeenCalled();
     unmount();
     expect(release).toHaveBeenCalledTimes(1);
     expect(image.onload).toBeNull();
     expect(image.onerror).toBeNull();
     expect(image.getAttribute('src')).toBeNull();
+  });
+
+  it('grows the Snow sprite cache only across size or DPR buckets without reloading or reseeding', async () => {
+    const { ctx, frame, random, ticker, draw } = createEffectHarness(4);
+    const image = document.createElement('img');
+    Object.defineProperties(image, {
+      naturalWidth: { value: 256 }, naturalHeight: { value: 128 },
+    });
+    const imageFactory = vi.spyOn(globalThis, 'Image').mockImplementation(function () { return image; });
+    const track = vi.spyOn(ticker, 'trackAsset');
+    const images = vi.spyOn(ctx, 'drawImage');
+    const scene = (maxSize: number) => (
+      <TickerCtx.Provider value={ticker}>
+        <Snow sprite="/crystal.svg" intensity={1} minSize={10} maxSize={maxSize} />
+      </TickerCtx.Provider>
+    );
+    const { rerender } = render(scene(10));
+    await act(async () => {
+      image.dispatchEvent(new Event('load'));
+      await track.mock.calls[0][0];
+    });
+    act(draw);
+    const first = images.mock.calls[0][0] as HTMLCanvasElement;
+    expect([first.width, first.height]).toEqual([64, 32]);
+    random.mockClear();
+
+    rerender(scene(30));
+    images.mockClear();
+    act(draw);
+    expect(images.mock.calls[0][0]).toBe(first);
+
+    rerender(scene(40));
+    images.mockClear();
+    act(draw);
+    const larger = images.mock.calls[0][0] as HTMLCanvasElement;
+    expect(larger).not.toBe(first);
+    expect([larger.width, larger.height]).toEqual([128, 64]);
+
+    frame.dpr = 2;
+    frame.budget = { ...frame.budget, dpr: 2 };
+    images.mockClear();
+    act(draw);
+    const sharper = images.mock.calls[0][0] as HTMLCanvasElement;
+    expect(sharper).not.toBe(larger);
+    expect([sharper.width, sharper.height]).toEqual([256, 128]);
+
+    frame.dpr = 1;
+    frame.budget = { ...frame.budget, dpr: 1 };
+    rerender(scene(10));
+    images.mockClear();
+    act(draw);
+    act(draw);
+    expect(images.mock.calls.every(([source]) => source === sharper)).toBe(true);
+    expect(sharper.getContext('2d')!.drawImage).toHaveBeenCalledTimes(1);
+    expect(imageFactory).toHaveBeenCalledTimes(1);
+    expect(track).toHaveBeenCalledTimes(1);
+    expect(random).not.toHaveBeenCalled();
+  });
+
+  it('bounds tall Snow sprite textures while preserving their original aspect ratio', async () => {
+    const { ctx, ticker, draw } = createEffectHarness(1);
+    const image = document.createElement('img');
+    Object.defineProperties(image, {
+      naturalWidth: { value: 2048 }, naturalHeight: { value: 4096 },
+    });
+    vi.spyOn(globalThis, 'Image').mockImplementation(function () { return image; });
+    const track = vi.spyOn(ticker, 'trackAsset');
+    const images = vi.spyOn(ctx, 'drawImage');
+    render(
+      <TickerCtx.Provider value={ticker}>
+        <Snow sprite="/tall.svg" intensity={1} minSize={2000} maxSize={2000} wobble={false} />
+      </TickerCtx.Provider>,
+    );
+    await act(async () => {
+      image.dispatchEvent(new Event('load'));
+      await track.mock.calls[0][0];
+    });
+    act(draw);
+    const cached = images.mock.calls[0][0] as HTMLCanvasElement;
+    expect([cached.width, cached.height]).toEqual([512, 1024]);
+    expect(images.mock.calls[0]).toEqual([cached, -1000, -2000, 2000, 4000]);
+  });
+
+  it.each(['context', 'draw'])('settles a failed Snow sprite rasterization (%s) with the built-in fallback', async (failure) => {
+    const { ctx, ticker, draw } = createEffectHarness(4);
+    const image = document.createElement('img');
+    Object.defineProperties(image, {
+      naturalWidth: { value: 64 }, naturalHeight: { value: 64 },
+    });
+    vi.spyOn(globalThis, 'Image').mockImplementation(function () { return image; });
+    const release = vi.fn();
+    const track = vi.spyOn(ticker, 'trackAsset').mockReturnValue(release);
+    const images = vi.spyOn(ctx, 'drawImage');
+    const { unmount } = render(
+      <TickerCtx.Provider value={ticker}><Snow sprite="/broken.svg" intensity={1} /></TickerCtx.Provider>,
+    );
+    act(draw);
+    const fallback = images.mock.calls[0][0];
+    const brokenContext = document.createElement('canvas').getContext('2d')!;
+    vi.spyOn(brokenContext, 'drawImage').mockImplementation(() => { throw new Error('Rasterization failed'); });
+    const contexts = vi.spyOn(HTMLCanvasElement.prototype, 'getContext')
+      .mockReturnValue(failure === 'context' ? null : brokenContext);
+    await act(async () => {
+      image.dispatchEvent(new Event('load'));
+      await track.mock.calls[0][0];
+    });
+    images.mockClear();
+    act(draw);
+    act(draw);
+    expect(images.mock.calls.every(([source]) => source === fallback)).toBe(true);
+    expect(contexts).toHaveBeenCalledTimes(1);
+    unmount();
+    expect(release).toHaveBeenCalledTimes(1);
+    expect(image.onload).toBeNull();
+    expect(image.getAttribute('src')).toBeNull();
+  });
+
+  it('retains a usable Snow sprite cache and does not retry a failed upgrade every frame', async () => {
+    const { ctx, frame, ticker, draw } = createEffectHarness(4);
+    const image = document.createElement('img');
+    Object.defineProperties(image, {
+      naturalWidth: { value: 64 }, naturalHeight: { value: 64 },
+    });
+    vi.spyOn(globalThis, 'Image').mockImplementation(function () { return image; });
+    const track = vi.spyOn(ticker, 'trackAsset');
+    const images = vi.spyOn(ctx, 'drawImage');
+    render(
+      <TickerCtx.Provider value={ticker}>
+        <Snow sprite="/crystal.svg" intensity={1} minSize={20} maxSize={20} />
+      </TickerCtx.Provider>,
+    );
+    await act(async () => {
+      image.dispatchEvent(new Event('load'));
+      await track.mock.calls[0][0];
+    });
+    act(draw);
+    const cached = images.mock.calls[0][0];
+    const contexts = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+    frame.dpr = 2;
+    frame.budget = { ...frame.budget, dpr: 2 };
+    images.mockClear();
+    act(draw);
+    act(draw);
+    expect(images.mock.calls.every(([source]) => source === cached)).toBe(true);
+    expect(contexts).toHaveBeenCalledTimes(1);
   });
 
   it('ignores late Snow sprite loads and settles failed or cancelled assets with a fallback', async () => {

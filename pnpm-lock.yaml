@@ -62,9 +62,9 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.3.1(react@19.3.1)
-      react-weather-overlays:
+      react-weather-effects:
         specifier: workspace:*
-        version: link:../../packages/react-weather-overlays
+        version: link:../../packages/react-weather-effects
     devDependencies:
       '@vitejs/plugin-react':
         specifier: ^4.3.4
@@ -81,23 +81,23 @@ importers:
 
   packages/effects:
     dependencies:
-      '@react-weather-overlays/core':
+      '@react-weather-effects/core':
         specifier: workspace:*
         version: link:../core
       react:
         specifier: '>=18'
         version: 19.3.1
 
-  packages/react-weather-overlays:
+  packages/react-weather-effects:
     dependencies:
       react:
         specifier: '>=18'
         version: 19.3.1
     devDependencies:
-      '@react-weather-overlays/core':
+      '@react-weather-effects/core':
         specifier: workspace:*
         version: link:../core
-      '@react-weather-overlays/effects':
+      '@react-weather-effects/effects':
         specifier: workspace:*
         version: link:../effects
 

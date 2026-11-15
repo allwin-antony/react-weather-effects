@@ -6,7 +6,7 @@ import {
   Fog,
   type Quality,
   type ReducedMotionProp,
-} from 'react-weather-overlays';
+} from 'react-weather-effects';
 
 export function App() {
   // Scene settings
@@ -226,7 +226,7 @@ export function App() {
         <div>
           <h1 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span>❄️</span>
-            <span>react-weather-overlays</span>
+            <span>react-weather-effects</span>
             <span
               style={{
                 fontSize: '11px',

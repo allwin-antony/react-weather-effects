@@ -1,5 +1,5 @@
 {
-  "name": "react-weather-overlays",
+  "name": "react-weather-effects",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -9,8 +9,8 @@
     "react": ">=18"
   },
   "devDependencies": {
-    "@react-weather-overlays/core": "workspace:*",
-    "@react-weather-overlays/effects": "workspace:*"
+    "@react-weather-effects/core": "workspace:*",
+    "@react-weather-effects/effects": "workspace:*"
   },
   "sideEffects": false,
   "exports": {

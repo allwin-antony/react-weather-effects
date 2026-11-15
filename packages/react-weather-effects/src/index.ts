@@ -6,7 +6,7 @@ export {
   type RenderBudget,
   type ReducedMotionProp,
   type MotionMode,
-} from '@react-weather-overlays/core';
+} from '@react-weather-effects/core';
 
 export {
   Rain,
@@ -15,4 +15,4 @@ export {
   type SnowProps,
   Fog,
   type FogProps,
-} from '@react-weather-overlays/effects';
+} from '@react-weather-effects/effects';
