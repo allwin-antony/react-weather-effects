@@ -1,6 +1,20 @@
 {
   "name": "react-weather-effects",
-  "version": "0.1.0",
+  "version": "0.1.0-beta.0",
+  "description": "Lightweight, composable 2D canvas weather visual effects for React",
+  "license": "MIT",
+  "keywords": [
+    "react",
+    "weather",
+    "effects",
+    "canvas",
+    "rain",
+    "snow",
+    "fog"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
@@ -26,7 +40,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "scripts": {
     "build": "tsup && node -e \"const fs=require('fs'); if(fs.existsSync('dist/index.d.ts')) fs.copyFileSync('dist/index.d.ts', 'dist/index.d.mts');\"",
