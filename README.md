@@ -1,83 +1,48 @@
 # react-weather-effects
 
-Composable rain, snow, and fog effects for React, rendered on a single 2D canvas. Use them as a fullscreen overlay or keep them inside a card, banner, or other container.
-
-The library handles animation scheduling, resizing, device pixel ratio, and particle reuse. You control the scene through React props; no stylesheet import or direct canvas management is required.
-
-- **Composable:** combine effects inside one `WeatherCanvas`.
-- **Configurable:** adjust intensity, speed, wind, colors, and snow artwork.
-- **Motion-aware:** respects reduced-motion preferences and stops animation while hidden or offscreen.
-- **Typed:** includes TypeScript declarations and ESM/CommonJS entry points.
-
-The current API includes `WeatherCanvas`, `Rain`, `Snow`, and `Fog`. Other effects described in the architecture roadmap are not yet public exports.
-
-## Contents
-
-- [Installation](#installation)
-- [Quick start](#quick-start)
-- [Usage examples](#usage-examples)
-- [API reference](#api-reference)
-- [Quality and performance](#quality-and-performance)
-- [Motion, accessibility, and lifecycle](#motion-accessibility-and-lifecycle)
-- [Server rendering and Next.js](#server-rendering-and-nextjs)
-- [Troubleshooting](#troubleshooting)
-- [Local development](#local-development)
+Composable, high-performance rain, snow, and fog visual effects for React, rendered on a single lightweight 2D canvas.
 
 ## Installation
 
+Install `react-weather-effects` using your package manager of choice:
+
+```sh
+# npm
+npm install react-weather-effects
+
+# pnpm
+pnpm add react-weather-effects
+
+# Yarn
+yarn add react-weather-effects
+```
+
+> **Beta Prerelease:** To install the current beta version:
+> ```sh
+> npm install react-weather-effects@beta
+> # or pin specifically:
+> npm install react-weather-effects@0.1.0-beta.0
+> ```
+
 ### Requirements
 
-- React 18 or later.
-- A browser with a 2D canvas context. Contained sizing uses `ResizeObserver`.
-- A maintained Node.js LTS release and pnpm when building or developing this repository.
+- **React 18** or later (React 18 and 19 supported as peer dependencies).
+- A modern browser with 2D `<canvas>` support. Contained sizing uses `ResizeObserver`.
+- Full TypeScript declarations, ESM (`.mjs`), and CommonJS (`.cjs`) entry points included.
 
-TypeScript is optional. JavaScript applications use the same component API.
+---
 
-### Run the demo
+## Quick Start
 
-The package is currently developed in this repository and does not have a public npm release. To evaluate it locally, run these commands from the repository root:
-
-```sh
-pnpm install
-pnpm build
-pnpm demo
-```
-
-The demo runs at `http://localhost:5173` by default. Vite may select another port if that one is occupied; use the address printed in the terminal.
-
-### Install a local build in another application
-
-After building, create a tarball of the public package:
-
-```sh
-pnpm --dir packages/react-weather-effects pack --pack-destination ../..
-```
-
-For the current `0.1.0` version, this creates `react-weather-effects-0.1.0.tgz` in the repository root. From your application directory, install that file using its actual path:
-
-```sh
-npm install /path/to/react-weather-effects-0.1.0.tgz
-```
-
-You can also use `pnpm add` with the tarball path. Import from `react-weather-effects`, not the private `@react-weather-effects/core` or `@react-weather-effects/effects` workspaces.
-
-## Quick start
-
-Mount a `WeatherCanvas` in your application and place an effect inside it:
+Wrap any effect component inside `<WeatherCanvas>`:
 
 ```tsx
 import { WeatherCanvas, Rain } from 'react-weather-effects';
 
 export default function App() {
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        background: '#0f172a',
-        color: '#fff',
-      }}
-    >
-      <h1>Your page content</h1>
+    <main style={{ minHeight: '100vh', background: '#0f172a', color: '#fff' }}>
+      <h1>My Weather App</h1>
 
       <WeatherCanvas>
         <Rain intensity={0.6} />
@@ -87,9 +52,31 @@ export default function App() {
 }
 ```
 
-By default, the canvas covers the viewport and uses medium quality. Its background is transparent, and it does not intercept pointer events, so links and controls underneath remain usable.
+By default, `<WeatherCanvas>` runs in `mode="fullscreen"`, covering the viewport with a transparent background. It ignores pointer events (`pointer-events: none`), so all underlying interactive elements remain clickable.
 
-All effects must be descendants of `WeatherCanvas`. They render into its shared canvas rather than creating their own DOM elements or animation loops.
+---
+
+## Features
+
+- **Single Canvas Engine:** One 2D `<canvas>` manages all effects, batching rendering at 60 FPS without DOM bloat.
+- **Composable:** Combine multiple effects (`Rain`, `Snow`, `Fog`) inside a single canvas.
+- **Configurable:** Adjust intensity, speed, wind angle, colors, and custom snowflake sprite artwork.
+- **Motion-Aware & Accessible:** Automatically respects `prefers-reduced-motion` and pauses when hidden or offscreen.
+- **Contained & Fullscreen:** Place inside specific cards/heroes (`mode="contained"`) or cover the whole screen.
+- **SSR & Next.js Safe:** Safe for React Server Components (RSC) and Next.js App Router (runs cleanly with `'use client'`).
+
+---
+
+## Contents
+
+- [Usage examples](#usage-examples)
+- [API reference](#api-reference)
+- [Quality and performance](#quality-and-performance)
+- [Motion, accessibility, and lifecycle](#motion-accessibility-and-lifecycle)
+- [Server rendering and Next.js](#server-rendering-and-nextjs)
+- [Troubleshooting](#troubleshooting)
+- [Local development](#local-development)
+- [License](#license)
 
 ## Usage examples
 
@@ -367,6 +354,18 @@ If the browser cannot provide a 2D rendering context, the engine stops drawing a
 
 ## Local development
 
+This section is for contributors working from a source checkout. It is not required when using the installed npm package. Use a maintained Node.js LTS release and pnpm.
+
+From the repository root, install dependencies, build the library, and start the demo:
+
+```sh
+pnpm install
+pnpm build
+pnpm demo
+```
+
+The demo runs at `http://localhost:5173` by default. Vite may select another port if that one is occupied; use the address printed in the terminal.
+
 The repository is a pnpm workspace:
 
 ```text
@@ -390,10 +389,30 @@ Run these commands from the repository root:
 | `pnpm demo` | Start the local Vite demo. Build the packages first. |
 | `pnpm test` | Run the test suite once. |
 | `pnpm test:watch` | Run tests in watch mode. |
-| `pnpm typecheck` | Check TypeScript project references. |
+| `pnpm typecheck` | Check TypeScript project references; writes generated files into `dist`. |
 | `pnpm size` | Measure bundle sizes after a package build. |
 | `pnpm --filter weather-effects-demo build` | Build the demo for production. |
 
+Run `pnpm typecheck` and `pnpm build` sequentially, not at the same time: both write to the package `dist` directories. Run `pnpm build` after typechecking and before packing a release so the distributable declarations are bundled correctly.
+
 The demo consumes built workspace packages. After changing library source, rebuild the packages and reload the demo; restart its server if it retains cached output.
 
-For implementation contracts, package boundaries, and future plans, see [ARCHITECTURE.md](ARCHITECTURE.md). Keep changes focused, cover rendering and lifecycle behavior with tests, and verify the build, types, and size budget before submitting changes.
+### Test a local package build
+
+After running `pnpm build`, create a tarball of the public package:
+
+```sh
+pnpm --dir packages/react-weather-effects pack --pack-destination ../..
+```
+
+Install the generated tarball in a separate application using its actual path. For the current beta version:
+
+```sh
+npm install /path/to/react-weather-effects-0.1.0-beta.0.tgz
+```
+
+For implementation contracts, package boundaries, and future plans, see `ARCHITECTURE.md` in the source repository. Keep changes focused, cover rendering and lifecycle behavior with tests, and verify the build, types, and size budget before submitting changes.
+
+## License
+
+Licensed under the MIT license.
