@@ -1,0 +1,24 @@
+[
+  {
+    "name": "Core",
+    "path": "packages/react-weather-overlays/dist/index.mjs",
+    "import": "{ WeatherCanvas }",
+    "limit": "5 kB",
+    "gzip": true,
+    "ignore": ["react", "react/jsx-runtime", "react/jsx-dev-runtime"]
+  },
+  {
+    "name": "Core + Rain (baseline)",
+    "path": "packages/react-weather-overlays/dist/index.mjs",
+    "import": "{ WeatherCanvas, Rain }",
+    "gzip": true,
+    "ignore": ["react", "react/jsx-runtime", "react/jsx-dev-runtime"]
+  },
+  {
+    "name": "v0.1 Big 3 (baseline)",
+    "path": "packages/react-weather-overlays/dist/index.mjs",
+    "import": "{ WeatherCanvas, Rain, Snow, Fog }",
+    "gzip": true,
+    "ignore": ["react", "react/jsx-runtime", "react/jsx-dev-runtime"]
+  }
+]
