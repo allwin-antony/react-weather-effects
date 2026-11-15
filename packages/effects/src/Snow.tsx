@@ -1,0 +1,302 @@
+import { useContext, useEffect, useRef } from 'react';
+import {
+  createParticlePool,
+  type FrameState,
+  growParticlePool,
+  LAYER,
+  PARTICLE_STRIDE,
+  TickerCtx,
+} from '@react-weather-overlays/core';
+
+export interface SnowProps {
+  intensity?: number;
+  speed?: number;
+  color?: string;
+  /** Image URL with original colors preserved. Remote images must allow CORS. */
+  sprite?: string;
+  /** Radius in CSS pixels; defaults to 6 for sprites, 1.5 for built-in flakes. */
+  minSize?: number;
+  /** Radius in CSS pixels; defaults to 18 for sprites, 4 for built-in flakes. */
+  maxSize?: number;
+  wobble?: boolean;
+}
+
+interface SnowSettings {
+  intensity: number;
+  speed: number;
+  color: string;
+  minSize: number;
+  maxSize: number;
+  wobble: boolean;
+}
+
+function createSnowTexture(color: string): HTMLCanvasElement | null {
+  if (typeof document === 'undefined') return null;
+
+  const surface = document.createElement('canvas');
+  surface.width = surface.height = 64;
+  const ctx = surface.getContext('2d');
+  if (!ctx) return null;
+
+  const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+  gradient.addColorStop(0.25, 'rgba(255, 255, 255, 0.95)');
+  gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.55)');
+  gradient.addColorStop(0.75, 'rgba(255, 255, 255, 0.15)');
+  gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 64, 64);
+  ctx.globalCompositeOperation = 'source-in';
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, 64, 64);
+  return surface;
+}
+
+function seedSnowflake(
+  pool: Float32Array,
+  i: number,
+  state: FrameState,
+  isInitial: boolean,
+): void {
+  const base = i * PARTICLE_STRIDE;
+  // Smaller, distant flakes drift more slowly than foreground flakes.
+  const depth = Math.pow(state.random(), 1.5);
+  const fallSpeed = 22 + depth * 54 + state.random() * 12;
+
+  let x: number;
+  let y: number;
+
+  if (isInitial) {
+    x = state.random() * (state.width + 100) - 50;
+    y = state.random() * (state.height + 50) - 25;
+  } else {
+    const windX = state.wind.x;
+    const vFlux = Math.max(20, fallSpeed) * state.width;
+    const hFlux = Math.abs(windX * 90) * state.height;
+    const sideRatio = hFlux / (vFlux + hFlux);
+
+    if (state.random() < sideRatio) {
+      x = windX > 0 ? -20 - state.random() * 30 : state.width + 20 + state.random() * 30;
+      y = state.random() * (state.height + 50) - 25;
+    } else {
+      x = state.random() * (state.width + 100) - 50;
+      y = -20 - state.random() * 50;
+    }
+  }
+
+  pool[base] = x;
+  pool[base + 1] = y;
+  pool[base + 2] = 0; // horizontal velocity
+  pool[base + 3] = fallSpeed; // intrinsic fall speed
+  pool[base + 4] = 0.3 + depth * 0.6; // alpha
+  pool[base + 5] = state.random() * Math.PI * 2; // wobble phase
+  pool[base + 6] = depth;
+}
+
+function seedSnowRange(
+  pool: Float32Array,
+  startIndex: number,
+  endIndex: number,
+  state: FrameState,
+): void {
+  for (let i = startIndex; i < endIndex; i++) {
+    seedSnowflake(pool, i, state, true);
+  }
+}
+
+function updateSnow(
+  pool: Float32Array,
+  count: number,
+  state: FrameState,
+  settings: SnowSettings,
+): void {
+  const dt = state.dt;
+  const width = state.width;
+  const height = state.height;
+  const wrapWidth = width + 100;
+  const gust = 1 + Math.sin(state.timestamp * 0.0004) * 0.2;
+
+  for (let i = 0; i < count; i++) {
+    const base = i * PARTICLE_STRIDE;
+    let x = pool[base];
+    let y = pool[base + 1];
+    let phase = pool[base + 5];
+    const baseVy = pool[base + 3];
+    const depth = pool[base + 6];
+
+    if (settings.wobble) {
+      phase += dt * (0.65 + depth * 1.4) * settings.speed;
+      pool[base + 5] = phase;
+    }
+
+    const sway = settings.wobble
+      ? (Math.sin(phase) * (10 + depth * 22) + Math.sin(phase * 0.5) * 8) * settings.speed
+      : 0;
+    const vx = sway + state.wind.x * (50 + depth * 80) * gust;
+    const flutter = settings.wobble ? 1 + Math.sin(phase * 0.8) * 0.12 : 1;
+    const vy = baseVy * settings.speed * flutter;
+
+    x += vx * dt;
+    y += (vy + state.wind.y * 30) * dt;
+
+    // Preserve horizontal coverage without restarting flakes at the top.
+    if (x > width + 50 || x < -50) {
+      x = ((x + 50) % wrapWidth + wrapWidth) % wrapWidth - 50;
+    }
+
+    if (y > height + 30) {
+      seedSnowflake(pool, i, state, false);
+    } else {
+      pool[base] = x;
+      pool[base + 1] = y;
+      pool[base + 2] = vx;
+    }
+  }
+}
+
+function drawSnow(
+  pool: Float32Array,
+  count: number,
+  state: FrameState,
+  settings: SnowSettings,
+  texture: CanvasImageSource | null,
+  sprite: HTMLImageElement | null,
+): void {
+  if (count === 0) return;
+
+  const ctx = state.ctx;
+  const aspect = sprite ? sprite.naturalWidth / sprite.naturalHeight : 1;
+  ctx.fillStyle = settings.color;
+
+  for (let i = 0; i < count; i++) {
+    const base = i * PARTICLE_STRIDE;
+    const x = pool[base];
+    const y = pool[base + 1];
+    const depth = pool[base + 6];
+    const r = Math.max(0, settings.minSize + depth * (settings.maxSize - settings.minSize));
+    if (r === 0) continue;
+
+    const fade = Math.max(0, Math.min(1, (y + 20) / 45, (state.height + 20 - y) / 55));
+    ctx.globalAlpha = pool[base + 4] * fade;
+    if (sprite) {
+      const halfWidth = r * Math.min(1, aspect);
+      const halfHeight = r / Math.max(1, aspect);
+      ctx.save();
+      try {
+        ctx.translate(x, y);
+        if (settings.wobble) ctx.rotate(Math.sin(pool[base + 5]) * 0.35);
+        ctx.drawImage(sprite, -halfWidth, -halfHeight, halfWidth * 2, halfHeight * 2);
+      } finally {
+        ctx.restore();
+      }
+    } else if (texture) {
+      const radius = r * 1.55;
+      ctx.drawImage(texture, x - radius, y - radius, radius * 2, radius * 2);
+    } else {
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  ctx.globalAlpha = 1;
+}
+
+export function Snow({
+  intensity = 0.5,
+  speed = 1,
+  color = 'rgba(255, 255, 255, 0.85)',
+  sprite,
+  minSize = sprite ? 6 : 1.5,
+  maxSize = sprite ? 18 : 4,
+  wobble = true,
+}: SnowProps) {
+  const ticker = useContext(TickerCtx);
+
+  if (!ticker) {
+    throw new Error('<Snow /> must be used inside <WeatherCanvas>');
+  }
+
+  const settingsRef = useRef<SnowSettings>({
+    intensity,
+    speed,
+    color,
+    minSize,
+    maxSize,
+    wobble,
+  });
+  const textureRef = useRef<CanvasImageSource | null>(null);
+  const spriteRef = useRef<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    settingsRef.current = { intensity, speed, color, minSize, maxSize, wobble };
+    ticker.invalidate();
+  }, [ticker, intensity, speed, color, minSize, maxSize, wobble]);
+
+  useEffect(() => {
+    textureRef.current = createSnowTexture(color);
+    ticker.invalidate();
+    return () => {
+      textureRef.current = null;
+    };
+  }, [ticker, color]);
+
+  useEffect(() => {
+    if (!sprite || typeof Image === 'undefined') return;
+
+    let isMounted = true;
+    let settle!: () => void;
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+    const task = new Promise<void>((resolve) => {
+      settle = resolve;
+      image.onload = () => {
+        if (isMounted && image.naturalWidth > 0 && image.naturalHeight > 0) {
+          spriteRef.current = image;
+          ticker.invalidate();
+        }
+        resolve();
+      };
+      image.onerror = () => { resolve(); };
+    });
+    const releaseTask = ticker.trackAsset(task);
+    image.src = sprite;
+
+    return () => {
+      isMounted = false;
+      image.onload = null;
+      image.onerror = null;
+      image.removeAttribute('src');
+      spriteRef.current = null;
+      settle();
+      releaseTask();
+    };
+  }, [ticker, sprite]);
+
+  useEffect(() => {
+    let pool = createParticlePool(ticker.getBudget().maxParticles);
+    let initializedCount = 0;
+
+    const unregister = ticker.register(LAYER.MIDGROUND, (state) => {
+      const settings = settingsRef.current;
+      const count = Math.round(
+        Math.max(0, Math.min(1, settings.intensity)) * state.budget.maxParticles,
+      );
+
+      pool = growParticlePool(pool, state.budget.maxParticles);
+      if (count > initializedCount) {
+        seedSnowRange(pool, initializedCount, count, state);
+        initializedCount = count;
+      }
+
+      if (state.dt > 0) {
+        updateSnow(pool, count, state, settings);
+      }
+      drawSnow(pool, count, state, settings, textureRef.current, spriteRef.current);
+    });
+
+    return unregister;
+  }, [ticker]);
+
+  return null;
+}

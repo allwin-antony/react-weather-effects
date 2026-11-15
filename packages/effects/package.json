@@ -1,0 +1,26 @@
+{
+  "name": "@react-weather-overlays/effects",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "dependencies": {
+    "@react-weather-overlays/core": "workspace:*"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  }
+}
