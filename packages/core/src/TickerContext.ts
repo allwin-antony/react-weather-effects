@@ -4,6 +4,7 @@ import type { RenderBudget } from './budget';
 export interface FrameState {
   ctx: CanvasRenderingContext2D;
   dt: number; // seconds; capped at 0.1s; 0 on first frame after pause
+  isAnimating: boolean; // false for static/paused rendering; animated frames may have dt = 0
   width: number; // CSS pixels
   height: number; // CSS pixels
   dpr: number; // clamped DPR applied by engine

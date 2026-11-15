@@ -69,6 +69,7 @@ Children **never** own their own `requestAnimationFrame`. Each effect registers 
 export interface FrameState {
   ctx:       CanvasRenderingContext2D;
   dt:        number;          // seconds; capped at 0.1s; 0 on first frame after pause
+  isAnimating: boolean;       // false for static/paused rendering; dt=0 may still be animated
   width:     number;          // CSS pixels
   height:    number;          // CSS pixels
   dpr:       number;          // clamped DPR applied by engine
@@ -174,6 +175,8 @@ export function Rain({ intensity = 0.7, angle = 10 }: RainProps) {
 
 > [!IMPORTANT]
 > **`settingsRef` decouples prop changes from pool lifecycle.** Changing `intensity` or `angle` updates the ref and invalidates the scene. Increasing intensity initializes only newly activated particles. A quality upgrade may grow capacity while preserving existing entries; downgrades reduce the active count. Full reinitialization happens on remount.
+
+**Opt-in scene transitions:** Rain and Snow accept `transitionDuration` (milliseconds, default `0`) to fade added/removed particles while preserving their pools and existing velocity behavior. Fog uses the same option to interpolate density without resetting wisps. Transition state is effect-local and advances only through `FrameState.dt`; `isAnimating` distinguishes animated zero-delta frames from static/paused presentations, which apply targets immediately. Retargeting starts from current visibility. Quality downgrades remain hard active-particle caps, and mounting/unmounting remain immediate; consumers keep effects mounted at zero intensity/density to crossfade scenes.
 
 > [!NOTE]
 > **Effects are independent.** `<Lightning/>` does not reference a `<Rain/>` instance. Thunderstorm behavior is composed through props — a preset helper returns prop objects for each child. This makes composition predictable.
@@ -991,16 +994,16 @@ flowchart LR
 
 ## ✅ v0.1 Scaffolding Checklist
 
-- [ ] pnpm monorepo + `pnpm-workspace.yaml`
-- [ ] Private `packages/core` — `WeatherCanvas`, stable `TickerContext`, cached registry, `invalidate()`, pool growth helpers, PRNG, scheduler seam, asset tracking, auto-pause hooks, SSR guards, per-canvas budget
-- [ ] Private `packages/effects` — Rain/Snow/Fog with persistent settings/pools, meaningful static initialization, explicit invalidation, and texture cleanup/fallbacks
-- [ ] `packages/react-weather-effects` — v0.1 re-exports, nested ESM/CJS type conditions, `sideEffects: false`, React peer, build-only workspace dependencies
-- [ ] Shared tsup config + per-package configs; facade `noExternal` and declaration resolution; explicit `.mjs`/`.cjs`/`.d.mts`/`.d.cts` output
-- [ ] `.size-limit.json` + CI: explicit gzip, excluded React peer runtime, core-only gate, Rain/Big-3 baselines
+- [x] pnpm monorepo + `pnpm-workspace.yaml`
+- [x] Private `packages/core` — `WeatherCanvas`, stable `TickerContext`, cached registry, `invalidate()`, pool growth helpers, PRNG, scheduler seam, asset tracking, auto-pause hooks, SSR guards, per-canvas budget
+- [x] Private `packages/effects` — Rain/Snow/Fog with persistent settings/pools, meaningful static initialization, explicit invalidation, and texture cleanup/fallbacks
+- [x] `packages/react-weather-effects` — v0.1 re-exports, nested ESM/CJS type conditions, `sideEffects: false`, React peer, build-only workspace dependencies
+- [x] Shared tsup config + per-package configs; facade `noExternal` and declaration resolution; explicit `.mjs`/`.cjs`/`.d.mts`/`.d.cts` output
+- [x] `.size-limit.json` + CI: explicit gzip, excluded React peer runtime, core-only gate, Rain/Big-3 baselines
 - [ ] Packed-tarball checks: native ESM/CJS imports, TypeScript NodeNext/Bundler resolution, no unresolved private imports, shared ticker context
 - [ ] Tree-shaking fixtures in Vite/Webpack that render selected exports and verify unused shipped effects are removed
 - [ ] Storybook capture helper with fixed clock, seeds, viewport/DPR, asset readiness, and explicit capture frame
 - [ ] Chromatic CI that awaits each story's capture-readiness promise
-- [ ] Vitest: lifecycle/dispatch matrix above, including coalesced static invalidation, pool-preserving quality updates, asset cleanup, and context restoration
+- [x] Vitest: lifecycle/dispatch matrix above, including coalesced static invalidation, pool-preserving quality updates, asset cleanup, and context restoration
 - [ ] Playwright: representative scenes, real-browser hydration/visibility behavior, and frame timing in Chrome/Firefox; WebKit compatibility coverage
 - [ ] Actual Safari/iOS benchmark results with reference device/browser details

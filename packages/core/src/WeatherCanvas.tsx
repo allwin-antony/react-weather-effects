@@ -204,6 +204,7 @@ export function WeatherCanvas({
     const frameState: FrameState = {
       ctx,
       dt,
+      isAnimating: shouldAnimateRef.current,
       width: dimensions.width,
       height: dimensions.height,
       dpr: currentDpr,

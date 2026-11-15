@@ -7,9 +7,12 @@ import {
   PARTICLE_STRIDE,
   TickerCtx,
 } from '@react-weather-effects/core';
+import { createParticleTransition, updateParticleTransition } from './transition';
 
 export interface SnowProps {
   intensity?: number;
+  /** Intensity fade duration in milliseconds; 0 (default) applies changes immediately. */
+  transitionDuration?: number;
   speed?: number;
   color?: string;
   /**
@@ -26,6 +29,7 @@ export interface SnowProps {
 
 interface SnowSettings {
   intensity: number;
+  transitionDuration: number;
   speed: number;
   color: string;
   minSize: number;
@@ -196,6 +200,7 @@ function drawSnow(
   settings: SnowSettings,
   texture: CanvasImageSource | null,
   sprite: SnowSprite | null,
+  visibility: Float32Array,
 ): void {
   if (count === 0) return;
 
@@ -204,6 +209,7 @@ function drawSnow(
   ctx.fillStyle = settings.color;
 
   for (let i = 0; i < count; i++) {
+    if (visibility[i] === 0) continue;
     const base = i * PARTICLE_STRIDE;
     const x = pool[base];
     const y = pool[base + 1];
@@ -212,7 +218,7 @@ function drawSnow(
     if (r === 0) continue;
 
     const fade = Math.max(0, Math.min(1, (y + 20) / 45, (state.height + 20 - y) / 55));
-    ctx.globalAlpha = pool[base + 4] * fade;
+    ctx.globalAlpha = pool[base + 4] * fade * visibility[i];
     if (sprite) {
       const halfWidth = r * Math.min(1, aspect);
       const halfHeight = r / Math.max(1, aspect);
@@ -239,6 +245,7 @@ function drawSnow(
 
 export function Snow({
   intensity = 0.5,
+  transitionDuration = 0,
   speed = 1,
   color = 'rgba(255, 255, 255, 0.85)',
   sprite,
@@ -254,6 +261,7 @@ export function Snow({
 
   const settingsRef = useRef<SnowSettings>({
     intensity,
+    transitionDuration,
     speed,
     color,
     minSize,
@@ -264,9 +272,9 @@ export function Snow({
   const spriteRef = useRef<SnowSprite | null>(null);
 
   useEffect(() => {
-    settingsRef.current = { intensity, speed, color, minSize, maxSize, wobble };
+    settingsRef.current = { intensity, transitionDuration, speed, color, minSize, maxSize, wobble };
     ticker.invalidate();
-  }, [ticker, intensity, speed, color, minSize, maxSize, wobble]);
+  }, [ticker, intensity, transitionDuration, speed, color, minSize, maxSize, wobble]);
 
   useEffect(() => {
     textureRef.current = createSnowTexture(color);
@@ -312,14 +320,22 @@ export function Snow({
   }, [ticker, sprite]);
 
   useEffect(() => {
-    let pool = createParticlePool(ticker.getBudget().maxParticles);
+    const capacity = ticker.getBudget().maxParticles;
+    let pool = createParticlePool(capacity);
+    const particles = createParticleTransition(
+      Math.round(Math.max(0, Math.min(1, settingsRef.current.intensity)) * capacity),
+      capacity,
+      settingsRef.current.transitionDuration,
+    );
     let initializedCount = 0;
 
     const unregister = ticker.register(LAYER.MIDGROUND, (state) => {
       const settings = settingsRef.current;
-      const count = Math.round(
+      const targetCount = Math.round(
         Math.max(0, Math.min(1, settings.intensity)) * state.budget.maxParticles,
       );
+      updateParticleTransition(particles, targetCount, settings.transitionDuration, state);
+      const count = particles.count;
 
       pool = growParticlePool(pool, state.budget.maxParticles);
       if (count > initializedCount) {
@@ -340,7 +356,7 @@ export function Snow({
           spriteRef.current = createSnowSprite(cachedSprite.image, size) ?? cachedSprite;
         }
       }
-      drawSnow(pool, count, state, settings, textureRef.current, spriteRef.current);
+      drawSnow(pool, count, state, settings, textureRef.current, spriteRef.current, particles.visibility);
     });
 
     return unregister;

@@ -111,6 +111,7 @@ export function App() {
   const [quality, setQuality] = useState<Quality>('medium');
   const [reducedMotion, setReducedMotion] = useState<ReducedMotionProp>('auto');
   const [paused, setPaused] = useState(false);
+  const [transitionDuration, setTransitionDuration] = useState(800);
   const [windX, setWindX] = useState(0.2);
   const [windY, setWindY] = useState(0);
   const [bgTheme, setBgTheme] = useState<BgTheme>('night');
@@ -230,30 +231,27 @@ export function App() {
   // Build the effect children once so both modes share identical markup
   const effects = (
     <>
-      {enableRain && (
-        <Rain
-          intensity={rainIntensity}
-          angle={rainAngle}
-          speed={rainSpeed}
-        />
-      )}
-      {enableSnow && (
-        <Snow
-          intensity={snowIntensity}
-          speed={snowSpeed}
-          wobble={snowWobble}
-          sprite={spriteUrl}
-          minSize={snowMinSize}
-          maxSize={snowMaxSize}
-        />
-      )}
-      {enableFog && (
-        <Fog
-          density={fogDensity}
-          speed={fogSpeed}
-          layers={fogLayers}
-        />
-      )}
+      <Rain
+        intensity={enableRain ? rainIntensity : 0}
+        transitionDuration={transitionDuration}
+        angle={rainAngle}
+        speed={rainSpeed}
+      />
+      <Snow
+        intensity={enableSnow ? snowIntensity : 0}
+        transitionDuration={transitionDuration}
+        speed={snowSpeed}
+        wobble={snowWobble}
+        sprite={spriteUrl}
+        minSize={snowMinSize}
+        maxSize={snowMaxSize}
+      />
+      <Fog
+        density={enableFog ? fogDensity : 0}
+        transitionDuration={transitionDuration}
+        speed={fogSpeed}
+        layers={fogLayers}
+      />
     </>
   );
 
@@ -550,6 +548,10 @@ export function App() {
                 {paused ? '▶ Resume' : '⏸ Pause'}
               </button>
             </div>
+          </Section>
+
+          <Section title="Scene transitions">
+            <Slider label="Fade duration" value={transitionDuration} min={0} max={2000} step={100} format={(v) => `${v} ms`} onChange={setTransitionDuration} />
           </Section>
 
           {/* ---- Wind ---- */}

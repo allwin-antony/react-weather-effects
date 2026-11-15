@@ -7,9 +7,12 @@ import {
   PARTICLE_STRIDE,
   TickerCtx,
 } from '@react-weather-effects/core';
+import { createParticleTransition, updateParticleTransition } from './transition';
 
 export interface RainProps {
   intensity?: number;
+  /** Intensity fade duration in milliseconds; 0 (default) applies changes immediately. */
+  transitionDuration?: number;
   angle?: number; // degrees from vertical
   color?: string;
   speed?: number;
@@ -17,6 +20,7 @@ export interface RainProps {
 
 interface RainSettings {
   intensity: number;
+  transitionDuration: number;
   angle: number;
   color: string;
   speed: number;
@@ -119,6 +123,7 @@ function drawPool(
   count: number,
   state: FrameState,
   settings: RainSettings,
+  visibility: Float32Array,
 ): void {
   if (count === 0) return;
 
@@ -127,6 +132,7 @@ function drawPool(
   ctx.lineCap = 'round';
 
   for (let i = 0; i < count; i++) {
+    if (visibility[i] === 0) continue;
     const base = i * PARTICLE_STRIDE;
     const x = pool[base];
     const y = pool[base + 1];
@@ -140,7 +146,7 @@ function drawPool(
     for (let segment = 0; segment < 3; segment++) {
       const start = (segment / 3) * trailFactor;
       const end = ((segment + 1) / 3) * trailFactor;
-      ctx.globalAlpha = pool[base + 4] * fade * Math.pow(1 - segment / 3, 2);
+      ctx.globalAlpha = pool[base + 4] * fade * visibility[i] * Math.pow(1 - segment / 3, 2);
       ctx.lineWidth = (0.6 + depth * 1.1) * (1 - segment * 0.2);
       ctx.beginPath();
       ctx.moveTo(x - vx * start, y - vy * start);
@@ -154,6 +160,7 @@ function drawPool(
 
 export function Rain({
   intensity = 0.7,
+  transitionDuration = 0,
   angle = 10,
   color = 'rgba(190, 215, 245, 0.8)',
   speed = 1,
@@ -164,22 +171,30 @@ export function Rain({
     throw new Error('<Rain /> must be used inside <WeatherCanvas>');
   }
 
-  const settingsRef = useRef<RainSettings>({ intensity, angle, color, speed });
+  const settingsRef = useRef<RainSettings>({ intensity, transitionDuration, angle, color, speed });
 
   useEffect(() => {
-    settingsRef.current = { intensity, angle, color, speed };
+    settingsRef.current = { intensity, transitionDuration, angle, color, speed };
     ticker.invalidate();
-  }, [ticker, intensity, angle, color, speed]);
+  }, [ticker, intensity, transitionDuration, angle, color, speed]);
 
   useEffect(() => {
-    let pool = createParticlePool(ticker.getBudget().maxParticles);
+    const capacity = ticker.getBudget().maxParticles;
+    let pool = createParticlePool(capacity);
+    const particles = createParticleTransition(
+      Math.round(Math.max(0, Math.min(1, settingsRef.current.intensity)) * capacity),
+      capacity,
+      settingsRef.current.transitionDuration,
+    );
     let initializedCount = 0;
 
     const unregister = ticker.register(LAYER.MIDGROUND, (state) => {
       const settings = settingsRef.current;
-      const count = Math.round(
+      const targetCount = Math.round(
         Math.max(0, Math.min(1, settings.intensity)) * state.budget.maxParticles,
       );
+      updateParticleTransition(particles, targetCount, settings.transitionDuration, state);
+      const count = particles.count;
 
       pool = growParticlePool(pool, state.budget.maxParticles);
       if (count > initializedCount) {
@@ -190,7 +205,7 @@ export function Rain({
       if (state.dt > 0) {
         updatePool(pool, count, state, settings);
       }
-      drawPool(pool, count, state, settings);
+      drawPool(pool, count, state, settings, particles.visibility);
     });
 
     return unregister;

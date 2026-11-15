@@ -44,7 +44,7 @@ function createEffectHarness(maxParticles = 24) {
   const ctx = document.createElement('canvas').getContext('2d')!;
   const random = vi.fn(createSeededRandom('effect-rendering'));
   const frame: FrameState = {
-    ctx, random, dt: 0, timestamp: 0, width: 800, height: 600, dpr: 1,
+    ctx, random, dt: 0, isAnimating: true, timestamp: 0, width: 800, height: 600, dpr: 1,
     budget: { maxParticles, quality: 'medium', dpr: 1 },
     wind: { x: 0, y: 0 }, pointer: null,
   };
