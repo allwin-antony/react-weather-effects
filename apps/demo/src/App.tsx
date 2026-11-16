@@ -22,6 +22,17 @@ const SPRITE_URLS: Record<SpriteChoice, string | undefined> = {
   none: undefined,
 };
 
+// Pre-warm sprite image cache so switching between flake types is instantaneous
+if (typeof window !== 'undefined') {
+  Object.values(SPRITE_URLS).forEach((url) => {
+    if (url) {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = url;
+    }
+  });
+}
+
 const BG: Record<BgTheme, string> = {
   night: 'radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%)',
   sunset: 'linear-gradient(to bottom, #2b1055, #7597de)',

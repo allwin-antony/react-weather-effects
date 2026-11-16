@@ -348,6 +348,13 @@ With `splashes`, visible drops produce small, varied droplets that rise and fall
 
 Use nonnegative sizes, with `minSize <= maxSize`. Built-in flakes have a feathered glow that extends beyond their nominal radius.
 
+> **Tip — Preloading Custom Sprites:**
+> While a custom sprite image is downloading over the network, `<Snow>` renders built-in circular flakes as a fallback. To eliminate any initial visual pop and render your custom sprite immediately on frame 0, preload your sprite in your HTML `<head>`:
+> ```html
+> <link rel="preload" as="image" href="/path/to/snowflake.png" />
+> ```
+> For optimal performance, keep custom flake images lightweight (SVG or compressed PNG/WebP under 50 KB).
+
 ### `Fog`
 
 | Prop | Type | Default | Description |

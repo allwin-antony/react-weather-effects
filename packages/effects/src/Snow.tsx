@@ -18,6 +18,10 @@ export interface SnowProps {
   /**
    * Static image URL with original colors preserved. Remote images must allow CORS.
    * Cached as a raster texture up to 1024px per side; animated images use a snapshot.
+   *
+   * @tip To avoid a brief initial flash of built-in circular flakes while your image downloads,
+   * preload it in your document `<head>`: `<link rel="preload" as="image" href="/path/to/flake.png" />`.
+   * Preloaded or cached images initialize the sprite texture synchronously on frame 0.
    */
   sprite?: string;
   /** Radius in CSS pixels; defaults to 6 for sprites, 1.5 for built-in flakes. */
@@ -342,22 +346,31 @@ export function Snow({
     let settle!: () => void;
     const image = new Image();
     image.crossOrigin = 'anonymous';
+
+    const applyLoadedImage = () => {
+      if (isMounted && image.naturalWidth > 0 && image.naturalHeight > 0) {
+        spriteRef.current = createSnowSprite(
+          image,
+          getSnowSpriteSize(settingsRef.current, ticker.getBudget().dpr),
+        );
+        ticker.invalidate();
+      }
+    };
+
     const task = new Promise<void>((resolve) => {
       settle = resolve;
       image.onload = () => {
-        if (isMounted && image.naturalWidth > 0 && image.naturalHeight > 0) {
-          spriteRef.current = createSnowSprite(
-            image,
-            getSnowSpriteSize(settingsRef.current, ticker.getBudget().dpr),
-          );
-          ticker.invalidate();
-        }
+        applyLoadedImage();
         resolve();
       };
       image.onerror = () => { resolve(); };
     });
     const releaseTask = ticker.trackAsset(task);
     image.src = sprite;
+
+    if (image.complete && image.naturalWidth > 0 && image.naturalHeight > 0) {
+      applyLoadedImage();
+    }
 
     return () => {
       isMounted = false;

@@ -382,6 +382,30 @@ describe('Weather Effects', () => {
     expect(image.getAttribute('src')).toBeNull();
   });
 
+  it('synchronously initializes the Snow sprite when the image is already complete (preloaded)', () => {
+    const { ctx, random, ticker, draw } = createEffectHarness(4);
+    random.mockImplementation(() => 0.5);
+    const image = document.createElement('img');
+    Object.defineProperties(image, {
+      naturalWidth: { value: 64 },
+      naturalHeight: { value: 64 },
+      complete: { value: true },
+    });
+    vi.spyOn(globalThis, 'Image').mockImplementation(function () { return image; });
+    const images = vi.spyOn(ctx, 'drawImage');
+
+    render(
+      <TickerCtx.Provider value={ticker}>
+        <Snow sprite="/preloaded-flake.png" intensity={1} minSize={10} maxSize={10} wobble={false} />
+      </TickerCtx.Provider>,
+    );
+
+    act(draw);
+    const drawnTexture = images.mock.calls[0][0] as HTMLCanvasElement;
+    expect(drawnTexture).toBeInstanceOf(HTMLCanvasElement);
+    expect(images.mock.calls[0]).toEqual([drawnTexture, -10, -10, 20, 20]);
+  });
+
   it('grows the Snow sprite cache only across size or DPR buckets without reloading or reseeding', async () => {
     const { ctx, frame, random, ticker, draw } = createEffectHarness(4);
     const image = document.createElement('img');
