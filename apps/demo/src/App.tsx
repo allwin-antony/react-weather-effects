@@ -4,6 +4,8 @@ import {
   Rain,
   Snow,
   Fog,
+  Lightning,
+  type LightningFrequency,
   type Quality,
   type ReducedMotionProp,
 } from 'react-weather-effects';
@@ -142,6 +144,13 @@ export function App() {
   const [fogSpeed, setFogSpeed] = useState(1);
   const [fogLayers, setFogLayers] = useState(3);
 
+  // --- Lightning ---
+  const [enableLightning, setEnableLightning] = useState(false);
+  const [lightningFrequency, setLightningFrequency] = useState<LightningFrequency>('occasional');
+  const [lightningFlash, setLightningFlash] = useState(false);
+  const [lightningBrightness, setLightningBrightness] = useState(1);
+  const [lightningColor, setLightningColor] = useState('rgba(230, 240, 255, 0.95)');
+
   // --- Sidebar open on mobile ---
   const [panelOpen, setPanelOpen] = useState(false);
 
@@ -169,6 +178,7 @@ export function App() {
         setSnowSpeed(0.8);
         setSnowWobble(true);
         setEnableFog(false);
+        setEnableLightning(false);
         setWindX(0.25);
         setBgTheme('night');
         break;
@@ -180,6 +190,7 @@ export function App() {
         setSnowSpeed(0.7);
         setSnowWobble(true);
         setEnableFog(false);
+        setEnableLightning(false);
         setWindX(-0.15);
         setBgTheme('mountains');
         break;
@@ -191,6 +202,7 @@ export function App() {
         setSnowSpeed(1);
         setSnowWobble(true);
         setEnableFog(false);
+        setEnableLightning(false);
         setWindX(-0.2);
         setBgTheme('night');
         break;
@@ -202,7 +214,24 @@ export function App() {
         setEnableSnow(false);
         setEnableFog(true);
         setFogDensity(0.3);
+        setEnableLightning(false);
         setWindX(0.6);
+        setBgTheme('dark');
+        break;
+      case 'thunderstorm':
+        setEnableRain(true);
+        setRainIntensity(0.9);
+        setRainAngle(16);
+        setRainSpeed(1.3);
+        setRainSplashes(true);
+        setEnableSnow(false);
+        setEnableFog(true);
+        setFogDensity(0.35);
+        setEnableLightning(true);
+        setLightningFrequency('frequent');
+        setLightningFlash(false);
+        setLightningBrightness(1);
+        setWindX(0.7);
         setBgTheme('dark');
         break;
       case 'mist':
@@ -214,6 +243,7 @@ export function App() {
         setEnableFog(true);
         setFogDensity(0.7);
         setFogSpeed(0.6);
+        setEnableLightning(false);
         setWindX(0.1);
         setBgTheme('sunset');
         break;
@@ -227,6 +257,7 @@ export function App() {
         setEnableFog(true);
         setFogDensity(0.5);
         setFogLayers(4);
+        setEnableLightning(false);
         setWindX(1.4);
         setBgTheme('night');
         break;
@@ -262,6 +293,14 @@ export function App() {
         speed={fogSpeed}
         layers={fogLayers}
       />
+      {enableLightning && (
+        <Lightning
+          frequency={lightningFrequency}
+          flash={lightningFlash}
+          brightness={lightningBrightness}
+          color={lightningColor}
+        />
+      )}
     </>
   );
 
@@ -278,6 +317,7 @@ export function App() {
     { id: 'watercolor', label: '🎨 Dendrite' },
     { id: 'dots', label: '⚪ Dots' },
     { id: 'rain', label: '🌧️ Rain' },
+    { id: 'thunderstorm', label: '⛈️ Thunderstorm' },
     { id: 'blizzard', label: '🌨️ Blizzard' },
     { id: 'mist', label: '🌫️ Mist' },
   ];
@@ -449,7 +489,7 @@ export function App() {
               backdropFilter: 'blur(6px)',
               maxWidth: 420,
             }}>
-              <div style={{ fontSize: 40, marginBottom: 8 }}>{enableRain ? '🌧️' : enableFog ? '🌫️' : '❄️'}</div>
+              <div style={{ fontSize: 40, marginBottom: 8 }}>{enableLightning ? '⛈️' : enableRain ? '🌧️' : enableFog ? '🌫️' : '❄️'}</div>
               <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 6 }}>Fullscreen mode</h2>
               <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>
                 Effects render across the entire viewport. Use the panel to tweak every prop from the public API.
@@ -607,6 +647,54 @@ export function App() {
             <Slider label="Density" value={fogDensity} min={0} max={1} step={0.02} format={pct} onChange={setFogDensity} />
             <Slider label="Speed" value={fogSpeed} min={0} max={2.5} step={0.05} format={x2} onChange={setFogSpeed} />
             <Slider label="Layers" value={fogLayers} min={1} max={6} step={1} onChange={setFogLayers} />
+          </Section>
+
+          {/* ---- Lightning ---- */}
+          <Section title="⚡ Lightning" enabled={enableLightning} onToggle={setEnableLightning}>
+            <div>
+              <label style={{ fontSize: 11, color: '#94a3b8', display: 'block', marginBottom: 3 }}>Frequency</label>
+              <select
+                value={typeof lightningFrequency === 'string' ? lightningFrequency : 'custom'}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === 'rare' || val === 'occasional' || val === 'frequent') {
+                    setLightningFrequency(val);
+                  }
+                }}
+                style={selectStyle}
+              >
+                <option value="rare">Rare (~12s)</option>
+                <option value="occasional">Occasional (~6s)</option>
+                <option value="frequent">Frequent (~3s)</option>
+              </select>
+            </div>
+            <Slider
+              label="Brightness"
+              value={lightningBrightness}
+              min={0.2}
+              max={2}
+              step={0.1}
+              format={x1}
+              onChange={setLightningBrightness}
+            />
+            <Toggle
+              label="Screen-wide flash (opt-in)"
+              checked={lightningFlash}
+              onChange={setLightningFlash}
+            />
+            <div>
+              <label style={{ fontSize: 11, color: '#94a3b8', display: 'block', marginBottom: 3 }}>Bolt Color</label>
+              <select
+                value={lightningColor}
+                onChange={(e) => setLightningColor(e.target.value)}
+                style={selectStyle}
+              >
+                <option value="rgba(230, 240, 255, 0.95)">Electric Blue (Default)</option>
+                <option value="rgba(255, 255, 255, 0.95)">Pure White</option>
+                <option value="rgba(255, 230, 140, 0.95)">Golden Thunder</option>
+                <option value="rgba(216, 180, 254, 0.95)">Purple Spark</option>
+              </select>
+            </div>
           </Section>
         </div>
       </main>

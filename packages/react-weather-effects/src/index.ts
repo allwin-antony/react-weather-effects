@@ -15,4 +15,7 @@ export {
   type SnowProps,
   Fog,
   type FogProps,
+  Lightning,
+  type LightningProps,
+  type LightningFrequency,
 } from '@react-weather-effects/effects';

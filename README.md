@@ -1,6 +1,6 @@
 # react-weather-effects
 
-Composable, high-performance rain, snow, and fog visual effects for React, rendered on a single lightweight 2D canvas.
+Composable, high-performance rain, snow, fog, and lightning visual effects for React, rendered on a single lightweight 2D canvas.
 
 [![npm version](https://img.shields.io/npm/v/react-weather-effects.svg)](https://www.npmjs.com/package/react-weather-effects)
 [![Live Demo](https://img.shields.io/badge/Demo-Live%20Playground-0070f3?logo=vercel)](https://react-weather-effects-smoky.vercel.app/)
@@ -70,7 +70,7 @@ By default, `<WeatherCanvas>` runs in `mode="fullscreen"`, covering the viewport
 ## Features
 
 - **Single Canvas Engine:** One 2D `<canvas>` manages all effects, batching rendering at 60 FPS without DOM bloat.
-- **Composable:** Combine multiple effects (`Rain`, `Snow`, `Fog`) inside a single canvas.
+- **Composable:** Combine multiple effects (`Rain`, `Snow`, `Fog`, `Lightning`) inside a single canvas.
 - **Configurable:** Adjust intensity, speed, wind angle, colors, and custom snowflake sprite artwork.
 - **Smooth Scene Changes:** Opt into particle-preserving intensity and density fades with `transitionDuration`.
 - **Motion-Aware & Accessible:** Automatically respects `prefers-reduced-motion` and pauses when hidden or offscreen.
@@ -129,19 +129,20 @@ Size and style the parent rather than passing `width`, `height`, or `style` to `
 ### Combine effects
 
 ```tsx
-import { WeatherCanvas, Rain, Fog } from 'react-weather-effects';
+import { WeatherCanvas, Rain, Fog, Lightning } from 'react-weather-effects';
 
 export function RainyScene() {
   return (
     <WeatherCanvas quality="medium" wind={{ x: 0.3, y: 0 }}>
       <Fog density={0.25} layers={2} />
       <Rain intensity={0.75} angle={12} speed={1.1} />
+      <Lightning frequency="occasional" />
     </WeatherCanvas>
   );
 }
 ```
 
-Fog draws behind rain and snow. Rain and snow share a drawing priority; instances at that priority draw in registration order. Each effect has its own settings and can be mounted or removed independently.
+Fog draws behind rain and snow; lightning draws in the foreground. Rain and snow share a drawing priority; instances at that priority draw in registration order. Each effect has its own settings and can be mounted or removed independently.
 
 ### Transition between scenes
 
@@ -296,11 +297,25 @@ Use nonnegative sizes, with `minSize <= maxSize`. Built-in flakes have a feather
 
 Use nonnegative speed multipliers for the usual falling and drifting behavior. Setting `speed={0}` does not necessarily stop wind-driven movement; use `WeatherCanvas paused` to freeze the entire scene.
 
+### `Lightning`
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `frequency` | `'rare' \| 'occasional' \| 'frequent' \| number` | `'occasional'` | Preset or numeric strike frequency. Nonpositive or non-finite numbers disable strikes. |
+| `color` | `string` | `'rgba(230, 240, 255, 0.95)'` | CSS color for the procedural bolt's glow and core. |
+| `brightness` | `number` | `1` | Bolt and flash brightness multiplier. Negative or non-finite values become `0`. |
+| `flash` | `boolean` | `false` | Explicit opt-in for full-canvas illumination. Alias: `screenFlash`. |
+| `flashIntensity` | `number` | `0.3` | Illumination intensity, clamped to `0..1`. Non-finite values become `0`; rendered opacity is capped at `0.6`. |
+| `seed` | `string \| number` | Canvas PRNG | Optional effect-local seed for geometry and timing, independent of other effects' random consumption. |
+| `reducedMotion` | `'auto' \| boolean` | `'auto'` | Suppress flashes when `true`, or follow the system preference with `'auto'`. `false` overrides the system preference, but never enables flashes in a static or paused canvas. |
+
+The first draw seeds a bolt immediately. Presets use approximately `12s`, `6s`, and `3s` waits between bolts, with seeded ±20% jitter and a `2s` minimum wait. Positive numeric values up to `1` map from slow to fast; values above `1` specify an approximate strikes-per-minute rate, subject to the minimum wait and bolt duration. Visual prop changes do not reset the random sequence.
+
 ### TypeScript exports
 
 The public entry point exports these types in addition to the components:
 
-- `WeatherCanvasProps`, `RainProps`, `SnowProps`, `FogProps`
+- `WeatherCanvasProps`, `RainProps`, `SnowProps`, `FogProps`, `LightningProps`, `LightningFrequency`
 - `Quality`, `DPRWeight`, `RenderBudget`
 - `ReducedMotionProp`, `MotionMode`
 
@@ -316,7 +331,7 @@ Each `WeatherCanvas` owns its rendering budget:
 | `'medium'` | 300 | 2 |
 | `'high'` | 600 | 2 |
 
-The particle cap is **per effect instance**, not a whole-scene limit. For example, medium quality with `Snow intensity={0.5}` draws 150 flakes. A second identical `Snow` instance can draw another 150. Fog uses a bounded layer count and cached textures instead of this particle count.
+The particle cap is **per effect instance**, not a whole-scene limit. For example, medium quality with `Snow intensity={0.5}` draws 150 flakes. A second identical `Snow` instance can draw another 150. Fog uses a bounded layer count and cached textures instead of this particle count. New lightning bolts use the current quality's subdivision depth (`3`, `4`, or `5`) and at most `1`, `2`, or `3` branches.
 
 The `dpr` prop applies another resolution cap:
 
@@ -338,7 +353,7 @@ For lower rendering cost:
 
 There is no fixed FPS guarantee or automatic quality downgrade. The engine reuses particle pools and textures, but hardware, canvas area, DPR, and composition still matter.
 
-The repository's size check enforces a **5 kB minified-and-gzipped core-only budget**, excluding React. Rain and combined Rain/Snow/Fog sizes are reported separately; the core budget is not a size claim for all effects together.
+The repository's size check enforces a **5 kB minified-and-gzipped core-only budget**, excluding React. Rain, Lightning, combined Rain/Snow/Fog, and all-effects sizes are reported separately; the core budget is not a size claim for all effects together.
 
 ## Motion, accessibility, and lifecycle
 
@@ -356,6 +371,8 @@ The default `reducedMotion="auto"` follows the user's `prefers-reduced-motion` s
 Each active canvas uses one shared animation loop. Scheduling stops when the page is hidden, the canvas is outside the viewport, its size is zero, it is paused, motion is disabled/static, or no effects are mounted. Resuming continues from the retained scene state rather than starting over.
 
 The canvas is marked `aria-hidden="true"` and does not receive pointer events. Treat the effects as decorative: provide readable text or other accessible content when weather information itself matters.
+
+Lightning renders bolts only by default. Enable `flash` or `screenFlash` only after an explicit user choice. Full-canvas flash onsets share a minimum `2s` cooldown per `WeatherCanvas`, including across Lightning effect remounts. Static/paused canvases never flash, and disabling flashes or enabling reduced motion cancels an active flash. These safeguards are not a WCAG certification: evaluate the complete page's visual output, especially when using multiple canvases, and leave flashes off for photosensitive audiences.
 
 ### Seeds and scene resets
 
@@ -418,7 +435,7 @@ The repository is a pnpm workspace:
 ```text
 packages/
   core/                    Internal canvas engine, scheduler, budgets, and pools
-  effects/                 Internal Rain, Snow, and Fog implementations
+  effects/                 Internal Rain, Snow, Fog, and Lightning implementations
   react-weather-effects/   Public entry point and distributable bundle
 apps/
   demo/                    Vite demonstration application

@@ -20,5 +20,19 @@
     "import": "{ WeatherCanvas, Rain, Snow, Fog }",
     "gzip": true,
     "ignore": ["react", "react/jsx-runtime", "react/jsx-dev-runtime"]
+  },
+  {
+    "name": "Core + Lightning (baseline)",
+    "path": "packages/react-weather-effects/dist/index.mjs",
+    "import": "{ WeatherCanvas, Lightning }",
+    "gzip": true,
+    "ignore": ["react", "react/jsx-runtime", "react/jsx-dev-runtime"]
+  },
+  {
+    "name": "All effects (baseline)",
+    "path": "packages/react-weather-effects/dist/index.mjs",
+    "import": "{ WeatherCanvas, Rain, Snow, Fog, Lightning }",
+    "gzip": true,
+    "ignore": ["react", "react/jsx-runtime", "react/jsx-dev-runtime"]
   }
 ]
