@@ -5,6 +5,8 @@ import {
   Snow,
   Fog,
   Lightning,
+  presets,
+  type PresetName,
   type LightningFrequency,
   type Quality,
   type ReducedMotionProp,
@@ -169,6 +171,54 @@ export function App() {
   };
 
   const applyPreset = (id: string) => {
+    const key = id === 'rain' ? 'rainstorm' : id;
+    if (key in presets) {
+      const p = presets[key as PresetName];
+      setWindX(p.wind?.x ?? 0);
+      setWindY(p.wind?.y ?? 0);
+
+      setEnableRain(!!p.rain);
+      if (p.rain) {
+        setRainIntensity(p.rain.intensity ?? 0.7);
+        setRainAngle(p.rain.angle ?? 12);
+        setRainSpeed(p.rain.speed ?? 1);
+        setRainDropLength(p.rain.dropLength ?? 1);
+        setRainDropThickness(p.rain.dropThickness ?? 1);
+        setRainSplashes(p.rain.splashes ?? false);
+      }
+
+      setEnableSnow(!!p.snow);
+      if (p.snow) {
+        setSnowIntensity(p.snow.intensity ?? 0.5);
+        setSnowSpeed(p.snow.speed ?? 0.85);
+        setSnowWobble(p.snow.wobble ?? true);
+        handleSpriteChange('none');
+      }
+
+      setEnableFog(!!p.fog);
+      if (p.fog) {
+        setFogDensity(p.fog.density ?? 0.4);
+        setFogSpeed(p.fog.speed ?? 1);
+        setFogLayers(p.fog.layers ?? 3);
+      }
+
+      setEnableLightning(!!p.lightning);
+      if (p.lightning) {
+        setLightningFrequency(p.lightning.frequency ?? 'occasional');
+        setLightningBrightness(p.lightning.brightness ?? 1);
+        setLightningFlash(p.lightning.flash ?? false);
+      }
+
+      if (key === 'drizzle' || key === 'rainstorm' || key === 'thunderstorm') {
+        setBgTheme('dark');
+      } else if (key === 'mist') {
+        setBgTheme('sunset');
+      } else {
+        setBgTheme('night');
+      }
+      return;
+    }
+
     switch (id) {
       case 'crystal':
         setEnableRain(false);
@@ -312,14 +362,15 @@ export function App() {
     zIndex: 5,
   } as const;
 
-  const presets = [
-    { id: 'crystal', label: '✨ Crystal' },
-    { id: 'watercolor', label: '🎨 Dendrite' },
-    { id: 'dots', label: '⚪ Dots' },
-    { id: 'rain', label: '🌧️ Rain' },
-    { id: 'thunderstorm', label: '⛈️ Thunderstorm' },
+  const presetList = [
+    { id: 'drizzle', label: '🌦️ Drizzle' },
+    { id: 'rainstorm', label: '🌧️ Rainstorm' },
+    { id: 'snowfall', label: '❄️ Snowfall' },
     { id: 'blizzard', label: '🌨️ Blizzard' },
     { id: 'mist', label: '🌫️ Mist' },
+    { id: 'thunderstorm', label: '⛈️ Thunderstorm' },
+    { id: 'crystal', label: '✨ Crystal' },
+    { id: 'watercolor', label: '🎨 Dendrite' },
   ];
 
   return (
@@ -355,7 +406,7 @@ export function App() {
 
         {/* Presets — scroll horizontally on narrow screens */}
         <div style={{ display: 'flex', gap: 6, overflowX: 'auto', WebkitOverflowScrolling: 'touch', maxWidth: '100%' }}>
-          {presets.map((p) => (
+          {presetList.map((p) => (
             <button
               key={p.id}
               onClick={() => applyPreset(p.id)}
