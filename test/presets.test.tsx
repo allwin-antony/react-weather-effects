@@ -6,6 +6,7 @@ import { Rain } from '../packages/effects/src/Rain';
 import { Snow } from '../packages/effects/src/Snow';
 import { Fog } from '../packages/effects/src/Fog';
 import { Lightning } from '../packages/effects/src/Lightning';
+import { Heat } from '../packages/effects/src/Heat';
 import {
   presets,
   drizzle,
@@ -14,6 +15,7 @@ import {
   blizzard,
   mist,
   thunderstorm,
+  heatwave,
   type ScenePreset,
   type PresetName,
 } from '../packages/effects/src/presets';
@@ -26,15 +28,17 @@ describe('Scene Presets Public API', () => {
     'blizzard',
     'mist',
     'thunderstorm',
+    'heatwave',
   ];
 
-  it('exports all 6 named presets individually and in the presets dictionary', () => {
+  it('exports all 7 named presets individually and in the presets dictionary', () => {
     expect(presets.drizzle).toBe(drizzle);
     expect(presets.rainstorm).toBe(rainstorm);
     expect(presets.snowfall).toBe(snowfall);
     expect(presets.blizzard).toBe(blizzard);
     expect(presets.mist).toBe(mist);
     expect(presets.thunderstorm).toBe(thunderstorm);
+    expect(presets.heatwave).toBe(heatwave);
 
     for (const name of PRESET_NAMES) {
       expect(presets[name]).toBeDefined();
@@ -95,6 +99,16 @@ describe('Scene Presets Public API', () => {
     expect(thunderstorm.snow).toBeUndefined();
   });
 
+  it('defines valid, sensible configurations for heatwave', () => {
+    expect(heatwave.heat).toBeDefined();
+    expect(heatwave.heat?.intensity).toBeGreaterThan(0.5);
+    expect(heatwave.heat?.mirage).toBe(true);
+    expect(heatwave.heat?.shimmer).toBe(true);
+    expect(heatwave.heat?.wisps).toBe(true);
+    expect(heatwave.rain).toBeUndefined();
+    expect(heatwave.snow).toBeUndefined();
+  });
+
   it('composes directly with WeatherCanvas and effect components', () => {
     const scene: ScenePreset = presets.thunderstorm;
 
@@ -104,6 +118,7 @@ describe('Scene Presets Public API', () => {
         {scene.snow && <Snow {...scene.snow} />}
         {scene.fog && <Fog {...scene.fog} />}
         {scene.lightning && <Lightning {...scene.lightning} />}
+        {scene.heat && <Heat {...scene.heat} />}
       </WeatherCanvas>,
     );
 
@@ -121,6 +136,7 @@ describe('Scene Presets Public API', () => {
           <Snow intensity={active.snow?.intensity ?? 0} transitionDuration={200} {...active.snow} />
           <Fog density={active.fog?.density ?? 0} transitionDuration={200} {...active.fog} />
           {active.lightning && <Lightning {...active.lightning} />}
+          {active.heat && <Heat {...active.heat} />}
         </WeatherCanvas>
       );
     }
@@ -140,6 +156,11 @@ describe('Scene Presets Public API', () => {
     // Switch to mist
     act(() => {
       rerender(<WeatherSceneView presetName="mist" />);
+    });
+
+    // Switch to heatwave
+    act(() => {
+      rerender(<WeatherSceneView presetName="heatwave" />);
     });
 
     unmount();

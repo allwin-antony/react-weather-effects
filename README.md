@@ -1,6 +1,6 @@
 # react-weather-effects
 
-Composable, high-performance rain, snow, fog, and lightning visual effects for React, with shared wind controls and typed scene presets, rendered on a single lightweight 2D canvas.
+Composable, high-performance rain, snow, fog, lightning, and desert heat visual effects for React, with shared wind controls and typed scene presets, rendered on a single lightweight 2D canvas.
 
 [![npm version](https://img.shields.io/npm/v/react-weather-effects.svg)](https://www.npmjs.com/package/react-weather-effects)
 [![Live Demo](https://img.shields.io/badge/Demo-Live%20Playground-0070f3?logo=vercel)](https://react-weather-effects-smoky.vercel.app/)
@@ -68,7 +68,8 @@ By default, `<WeatherCanvas>` runs in `mode="fullscreen"`, covering the viewport
 ## Features
 
 - **Single Canvas Engine:** One 2D `<canvas>` manages all effects through a shared animation loop without DOM bloat.
-- **Composable:** Combine multiple effects (`Rain`, `Snow`, `Fog`, `Lightning`) inside a single canvas.
+- **Composable:** Combine multiple effects (`Rain`, `Snow`, `Fog`, `Lightning`, `Heat`) inside a single canvas.
+- **Desert Heat & Mirage:** Subtle ground-level haze, with hot-air refraction and a faint horizon mirage when supplied a background image.
 - **Rain Controls:** Adjust intensity, speed, angle, drop length/thickness, and colors, with optional bottom-edge splashes.
 - **Snow Artwork:** Use built-in flakes or cached custom sprites, with size, wobble, rotation, and spinning-speed controls.
 - **Layered Fog:** Configure density, drift speed, color, and up to six layers of cached atmospheric textures.
@@ -252,8 +253,9 @@ Ready-to-use, typed weather configurations representing common meteorological co
 - `blizzard`: Intense winter snowstorm with dense multilayer fog and gale winds.
 - `mist`: Atmospheric fog with faint, near-vertical droplets.
 - `thunderstorm`: Torrential rain, atmospheric mist, and frequent lightning strikes.
+- `heatwave`: Ground-level heat haze, hot-air shimmer, and a feathered horizon mirage. Supply a background image for refraction.
 
-Each preset is available as a named export (for example, `import { thunderstorm } from 'react-weather-effects'`) and in the `presets` dictionary. Presets are plain typed configuration objects (`ScenePreset` / `WeatherScene`) with optional `wind`, `rain`, `snow`, `fog`, and `lightning` fields matching the corresponding component props. They do not mount effects automatically.
+Each preset is available as a named export (for example, `import { thunderstorm, heatwave } from 'react-weather-effects'`) and in the `presets` dictionary. Presets are plain typed configuration objects (`ScenePreset` / `WeatherScene`) with optional `wind`, `rain`, `snow`, `fog`, `lightning`, and `heat` fields matching the corresponding component props. They do not mount effects automatically.
 
 Use them directly or transition smoothly between them:
 
@@ -381,16 +383,45 @@ Use nonnegative speed multipliers for the usual falling and drifting behavior. S
 
 The first draw seeds a bolt immediately. Presets use approximately `12s`, `6s`, and `3s` waits between bolts, with seeded ±20% jitter and a `2s` minimum wait. Positive numeric values up to `1` map from slow to fast; values above `1` specify an approximate strikes-per-minute rate, subject to the minimum wait and bolt duration. Visual prop changes do not reset the random sequence.
 
+### `Heat`
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `intensity` | `number` | `0.5` | Overall intensity (`0..1`), scaling refraction amplitude and haze opacity. |
+| `speed` | `number` | `1` | Nonnegative animation speed multiplier; `0` freezes the air turbulence. |
+| `color` | `string` | `'rgba(255, 225, 180, 0.08)'` | Atmospheric haze color, including its opacity. |
+| `backgroundImage` | `string` | — | Same-origin or CORS-enabled image URL to refract, sampled with centered `cover` sizing. |
+| `horizon` | `number` | `0.55` | Ground horizon as a fraction of canvas height, clamped to `0.1..0.9`. |
+| `transitionDuration` | `number` | `0` | Transition duration in ms when intensity changes; `0` applies immediately. |
+| `mirage` | `boolean` | `true` | Thin, feathered sky reflection just below the horizon. |
+| `shimmer` | `boolean` | `true` | Slowly rising, low-amplitude hot-air refraction. |
+| `wisps` | `boolean` | `true` | Fine-scale air turbulence; no visible vapor particles. |
+| `layer` | `number` | `LAYER.BACKGROUND` (0) | Stacking layer priority inside the canvas. |
+
+Real heat haze bends background light rather than emitting glowing waves. The transparent weather canvas cannot read the DOM behind it: without `backgroundImage`, Heat renders only a restrained haze approximation. Failed image loads also fall back to haze.
+
+For refraction, use the same image and centered `cover` sizing on the container. Keep Heat below rain, snow, or fog (`layer={-1}`) so the sampled background does not paint over them. This samples a static image, not arbitrary HTML, live video, or other weather layers.
+
+In fullscreen mode, the matching background must also be viewport-sized (for example, on a fixed `inset: 0` element), not sized to a taller scrolling page. Source images are raster-cached once, with the longest edge capped at 2048 pixels; quality controls distortion tessellation, not source-image resolution.
+
+```tsx
+<div style={{ position: 'relative', height: 400, background: 'url(/desert.jpg) center / cover' }}>
+  <WeatherCanvas mode="contained">
+    <Heat backgroundImage="/desert.jpg" horizon={0.55} intensity={0.7} layer={-1} />
+  </WeatherCanvas>
+</div>
+```
+
 ### TypeScript exports
 
 The public entry point exports these types in addition to the components:
 
-- `WeatherCanvasProps`, `RainProps`, `SnowProps`, `FogProps`, `LightningProps`, `LightningFrequency`
+- `WeatherCanvasProps`, `RainProps`, `SnowProps`, `FogProps`, `LightningProps`, `LightningFrequency`, `HeatProps`
 - `ScenePreset`, `WeatherScene`, `PresetName`, `ScenePresetName`
 - `Quality`, `DPRWeight`, `RenderBudget`
 - `ReducedMotionProp`, `MotionMode`
 
-`WeatherScene` aliases `ScenePreset`. `PresetName` is the union of the six preset names, and `ScenePresetName` aliases it.
+`WeatherScene` aliases `ScenePreset`. `PresetName` is the union of the named preset keys, and `ScenePresetName` aliases it.
 
 `MotionMode` describes the resolved state (`'animated'`, `'static'`, or `'off'`). The `reducedMotion` prop also accepts `'auto'` through `ReducedMotionProp`.
 

@@ -5,6 +5,7 @@ import {
   Snow,
   Fog,
   Lightning,
+  Heat,
   presets,
   type PresetName,
   type LightningFrequency,
@@ -13,7 +14,7 @@ import {
 } from 'react-weather-effects';
 
 type SpriteChoice = 'watercolor' | 'watercolor2' | 'crystal' | 'none';
-type BgTheme = 'night' | 'sunset' | 'dark' | 'mountains';
+type BgTheme = 'night' | 'sunset' | 'dark' | 'mountains' | 'desert';
 
 const SPRITE_URLS: Record<SpriteChoice, string | undefined> = {
   watercolor: '/snowflake-sprite.png',
@@ -33,11 +34,14 @@ if (typeof window !== 'undefined') {
   });
 }
 
+const DESERT_BACKGROUND = '/desert-road.svg';
+
 const BG: Record<BgTheme, string> = {
   night: 'radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%)',
   sunset: 'linear-gradient(to bottom, #2b1055, #7597de)',
   mountains: 'linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)',
   dark: 'linear-gradient(180deg, #090d16 0%, #111827 100%)',
+  desert: `#c6b79b url("${DESERT_BACKGROUND}") center / cover no-repeat`,
 };
 
 /*
@@ -164,6 +168,14 @@ export function App() {
   const [lightningBrightness, setLightningBrightness] = useState(1);
   const [lightningColor, setLightningColor] = useState('rgba(230, 240, 255, 0.95)');
 
+  // --- Heat ---
+  const [enableHeat, setEnableHeat] = useState(false);
+  const [heatIntensity, setHeatIntensity] = useState(0.8);
+  const [heatSpeed, setHeatSpeed] = useState(1);
+  const [heatMirage, setHeatMirage] = useState(true);
+  const [heatShimmer, setHeatShimmer] = useState(true);
+  const [heatWisps, setHeatWisps] = useState(true);
+
   // --- Sidebar open on mobile ---
   const [panelOpen, setPanelOpen] = useState(false);
 
@@ -220,7 +232,18 @@ export function App() {
         setLightningFlash(p.lightning.flash ?? false);
       }
 
-      if (key === 'drizzle' || key === 'rainstorm' || key === 'thunderstorm') {
+      setEnableHeat(!!p.heat);
+      if (p.heat) {
+        setHeatIntensity(p.heat.intensity ?? 0.8);
+        setHeatSpeed(p.heat.speed ?? 1);
+        setHeatMirage(p.heat.mirage ?? true);
+        setHeatShimmer(p.heat.shimmer ?? true);
+        setHeatWisps(p.heat.wisps ?? true);
+      }
+
+      if (key === 'heatwave') {
+        setBgTheme('desert');
+      } else if (key === 'drizzle' || key === 'rainstorm' || key === 'thunderstorm') {
         setBgTheme('dark');
       } else if (key === 'mist') {
         setBgTheme('sunset');
@@ -229,6 +252,8 @@ export function App() {
       }
       return;
     }
+
+    setEnableHeat(false);
 
     switch (id) {
       case 'crystal':
@@ -362,6 +387,17 @@ export function App() {
           color={lightningColor}
         />
       )}
+      <Heat
+        intensity={enableHeat ? heatIntensity : 0}
+        speed={heatSpeed}
+        backgroundImage={bgTheme === 'desert' ? DESERT_BACKGROUND : undefined}
+        horizon={0.52}
+        layer={-1}
+        mirage={heatMirage}
+        shimmer={heatShimmer}
+        wisps={heatWisps}
+        transitionDuration={transitionDuration}
+      />
     </>
   );
 
@@ -374,6 +410,7 @@ export function App() {
   } as const;
 
   const presetList = [
+    { id: 'heatwave', label: '🔥 Desert Heat' },
     { id: 'drizzle', label: '🌦️ Drizzle' },
     { id: 'rainstorm', label: '🌧️ Rainstorm' },
     { id: 'snowfall', label: '❄️ Snowfall' },
@@ -385,7 +422,11 @@ export function App() {
   ];
 
   return (
-    <div style={{ width: '100vw', minHeight: '100vh', background: BG[bgTheme], position: 'relative', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ width: '100vw', minHeight: '100vh', background: bgTheme === 'desert' && mode === 'fullscreen' ? '#c6b79b' : BG[bgTheme], position: 'relative', display: 'flex', flexDirection: 'column' }}>
+
+      {bgTheme === 'desert' && mode === 'fullscreen' && (
+        <div aria-hidden="true" style={{ position: 'fixed', inset: 0, background: BG.desert, pointerEvents: 'none' }} />
+      )}
 
       {/* --- Canvas --- */}
       {mode === 'fullscreen' && (
@@ -551,7 +592,7 @@ export function App() {
               backdropFilter: 'blur(6px)',
               maxWidth: 420,
             }}>
-              <div style={{ fontSize: 40, marginBottom: 8 }}>{enableLightning ? '⛈️' : enableRain ? '🌧️' : enableFog ? '🌫️' : '❄️'}</div>
+              <div style={{ fontSize: 40, marginBottom: 8 }}>{enableHeat ? '☀️' : enableLightning ? '⛈️' : enableRain ? '🌧️' : enableFog ? '🌫️' : '❄️'}</div>
               <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 6 }}>Fullscreen mode</h2>
               <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>
                 Effects render across the entire viewport. Use the panel to tweak every prop from the public API.
@@ -640,6 +681,7 @@ export function App() {
                   <option value="dark">Dark</option>
                   <option value="mountains">Mountains</option>
                   <option value="sunset">Sunset</option>
+                  <option value="desert">Desert road</option>
                 </select>
               </div>
             </div>
@@ -757,6 +799,42 @@ export function App() {
                 <option value="rgba(216, 180, 254, 0.95)">Purple Spark</option>
               </select>
             </div>
+          </Section>
+
+          <Section title="🔥 Heat & Mirage" enabled={enableHeat} onToggle={setEnableHeat}>
+            <Slider
+              label="Intensity"
+              value={heatIntensity}
+              min={0}
+              max={1}
+              step={0.02}
+              format={pct}
+              onChange={setHeatIntensity}
+            />
+            <Slider
+              label="Wave Speed"
+              value={heatSpeed}
+              min={0.1}
+              max={3}
+              step={0.1}
+              format={x1}
+              onChange={setHeatSpeed}
+            />
+            <Toggle
+              label="Horizon Mirage"
+              checked={heatMirage}
+              onChange={setHeatMirage}
+            />
+            <Toggle
+              label="Hot-Air Refraction"
+              checked={heatShimmer}
+              onChange={setHeatShimmer}
+            />
+            <Toggle
+              label="Fine Air Turbulence"
+              checked={heatWisps}
+              onChange={setHeatWisps}
+            />
           </Section>
         </div>
       </main>

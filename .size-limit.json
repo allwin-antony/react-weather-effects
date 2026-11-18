@@ -31,7 +31,7 @@
   {
     "name": "All effects (baseline)",
     "path": "packages/react-weather-effects/dist/index.mjs",
-    "import": "{ WeatherCanvas, Rain, Snow, Fog, Lightning }",
+    "import": "{ WeatherCanvas, Rain, Snow, Fog, Lightning, Heat }",
     "gzip": true,
     "ignore": ["react", "react/jsx-runtime", "react/jsx-dev-runtime"]
   }
