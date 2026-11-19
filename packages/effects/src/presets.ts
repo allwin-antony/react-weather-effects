@@ -2,6 +2,7 @@ import type { RainProps } from './Rain';
 import type { SnowProps } from './Snow';
 import type { FogProps } from './Fog';
 import type { LightningProps } from './Lightning';
+import type { HeatProps } from './Heat';
 
 export interface ScenePreset {
   wind?: { x: number; y: number };
@@ -9,6 +10,7 @@ export interface ScenePreset {
   snow?: SnowProps;
   fog?: FogProps;
   lightning?: LightningProps;
+  heat?: HeatProps;
 }
 
 export type WeatherScene = ScenePreset;
@@ -116,6 +118,20 @@ export const thunderstorm: ScenePreset = Object.freeze({
   },
 });
 
+/**
+ * Blistering desert heatwave with intense thermal shimmer, ground mirage, and rising evaporation wisps.
+ */
+export const heatwave: ScenePreset = Object.freeze({
+  wind: { x: 0.1, y: 0 },
+  heat: {
+    intensity: 0.8,
+    speed: 1.1,
+    mirage: true,
+    shimmer: true,
+    wisps: true,
+  },
+});
+
 export const presets = Object.freeze({
   drizzle,
   rainstorm,
@@ -123,6 +139,7 @@ export const presets = Object.freeze({
   blizzard,
   mist,
   thunderstorm,
+  heatwave,
 });
 
 export type PresetName = keyof typeof presets;

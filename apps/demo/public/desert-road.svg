@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+  <defs>
+    <linearGradient id="sky" x2="0" y2="1">
+      <stop stop-color="#82a9bb"/>
+      <stop offset="1" stop-color="#e5ddc6"/>
+    </linearGradient>
+    <linearGradient id="sand" x2="0" y2="1">
+      <stop stop-color="#c6b79b"/>
+      <stop offset="1" stop-color="#b89b73"/>
+    </linearGradient>
+    <linearGradient id="road" x2="0" y2="1">
+      <stop stop-color="#aaa99b"/>
+      <stop offset="1" stop-color="#656563"/>
+    </linearGradient>
+    <radialGradient id="sun">
+      <stop stop-color="#fff6d9" stop-opacity=".7"/>
+      <stop offset="1" stop-color="#fff6d9" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <path fill="url(#sky)" d="M0 0h1600v620H0z"/>
+  <ellipse fill="url(#sun)" cx="1190" cy="200" rx="260" ry="220"/>
+  <path fill="#b2b3a8" d="M0 480l90-35 74 9 90-68 40 8 36 44 65-5 94 63 110-17 55 28 84-39 60 22 59-43 51 6 45-36 62 12 78-38 48 22 65-11 77 68 66-7 78 29 80-40 44 36v105H0z"/>
+  <path fill="#a6a796" opacity=".6" d="M0 507l160-34 168 10 87 27 194-16 91 24 147-18 191 12 171-22 197 28 194-35v87H0z"/>
+  <path fill="url(#sand)" d="M0 520h1600v480H0z"/>
+  <path fill="#d8c5a3" opacity=".5" d="M0 587q330-66 715-52L491 647Q233 625 0 689zM1600 580q-286-48-815-45l274 124q276-32 541 62z"/>
+  <path fill="#9d896b" opacity=".3" d="M0 785q234-78 495-75l-36 25Q222 734 0 846zM1600 837q-290-123-559-137l45 48q260 27 514 157z"/>
+  <path fill="#cfc7af" d="M778 520h12l490 480H367z"/>
+  <path fill="url(#road)" d="M781 520h7l454 480H405z"/>
+  <path fill="#e0d8bc" opacity=".8" d="M781 521h1L445 1000h-7zM787 521h1l414 479h-8z"/>
+  <path fill="#e5d4a0" opacity=".75" d="M783 526h1l2 7h-2zM785 545h2l5 17h-3zM791 584h4l12 36h-6zM807 668h7l23 61h-10zM840 827h13l48 116h-20z"/>
+  <g fill="#8c795e" opacity=".65">
+    <path d="M173 701l10-7 12 4 4 7zM1346 739l13-7 18 9zM262 894l19-9 22 6 7 9zM1395 920l24-12 25 9 4 8zM98 968l16-9 12 4 5 9z"/>
+    <path d="M574 597l4-2 6 4zM1009 605l6-3 7 4zM410 653l8-4 8 6zM1213 656l5-3 8 4z"/>
+  </g>
+  <path fill="none" stroke="#e1d2b5" stroke-width="2" opacity=".35" d="M0 761q147-41 333-38M1239 811q168 43 361 120M24 920q124-25 207-19"/>
+</svg>

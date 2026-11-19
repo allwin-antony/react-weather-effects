@@ -1,6 +1,6 @@
 {
   "name": "react-weather-effects",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Lightweight, composable 2D canvas weather visual effects for React",
   "author": "Allwin Antony",
   "license": "MIT",
