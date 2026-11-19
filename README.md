@@ -2,16 +2,18 @@
 
 Composable, high-performance rain, snow, fog, lightning, and desert heat visual effects for React, with shared wind controls and typed scene presets, rendered on a single lightweight 2D canvas.
 
-[![npm version](https://img.shields.io/npm/v/react-weather-effects.svg)](https://www.npmjs.com/package/react-weather-effects)
-[![Live Demo](https://img.shields.io/badge/Demo-Live%20Playground-0070f3?logo=vercel)](https://react-weather-effects-smoky.vercel.app/)
-[![GitHub](https://img.shields.io/badge/GitHub-Repository-181717?logo=github)](https://github.com/allwin-antony/react-weather-effects)
-[![Sponsor](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=githubsponsors)](https://github.com/sponsors/allwin-antony)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+<p align="center">
+  <a href="https://www.npmjs.com/package/react-weather-effects"><img src="https://img.shields.io/npm/v/react-weather-effects.svg" alt="npm version" /></a>
+  <a href="https://react-weather-effects-smoky.vercel.app/"><img src="https://img.shields.io/badge/Demo-Live%20Playground-0070f3?logo=vercel" alt="Live Demo" /></a>
+  <a href="https://github.com/allwin-antony/react-weather-effects"><img src="https://img.shields.io/badge/GitHub-Repository-181717?logo=github" alt="GitHub" /></a>
+  <a href="https://github.com/sponsors/allwin-antony"><img src="https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=githubsponsors" alt="Sponsor" /></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
+</p>
 
 - **Live Demo:** [https://react-weather-effects-smoky.vercel.app/](https://react-weather-effects-smoky.vercel.app/)
 - **GitHub:** [https://github.com/allwin-antony/react-weather-effects](https://github.com/allwin-antony/react-weather-effects)
 - **npm:** [https://www.npmjs.com/package/react-weather-effects](https://www.npmjs.com/package/react-weather-effects)
-- **Sponsor:** [https://github.com/sponsors/allwin-antony](https://github.com/sponsors/allwin-antony)
+- **Sponsor:** [💖 Sponsor on GitHub](https://github.com/sponsors/allwin-antony)
 
 ## Installation
 
@@ -28,9 +30,9 @@ pnpm add react-weather-effects
 yarn add react-weather-effects
 ```
 
-> **v0.2.0:** To pin this release:
+> **v0.3.0:** To pin this release:
 > ```sh
-> npm install react-weather-effects@0.2.0
+> npm install react-weather-effects@0.3.0
 > ```
 
 ### Requirements
@@ -85,7 +87,7 @@ By default, `<WeatherCanvas>` runs in `mode="fullscreen"`, covering the viewport
 - **SSR & Next.js Safe:** SSR-safe imports and server rendering; use a `'use client'` boundary in Next.js App Router.
 - **TypeScript & Tree-Shaking:** Typed props and presets, tree-shakeable ESM, and CommonJS builds included.
 
-Wind is a shared input for the existing effects, not a standalone component. `Wind` and `Clouds` remain roadmap items and are not exported in v0.2.0.
+Wind is a shared input for the existing effects, not a standalone component. `Wind` and `Clouds` remain roadmap items and are not exported in v0.3.0.
 
 ---
 
@@ -573,10 +575,10 @@ After running `pnpm build`, create a tarball of the public package:
 pnpm --dir packages/react-weather-effects pack --pack-destination ../..
 ```
 
-Install the generated tarball in a separate application using its actual path. For v0.2.0:
+Install the generated tarball in a separate application using its actual path. For v0.3.0:
 
 ```sh
-npm install /path/to/react-weather-effects-0.2.0.tgz
+npm install /path/to/react-weather-effects-0.3.0.tgz
 ```
 
 For implementation contracts, package boundaries, and future plans, see `ARCHITECTURE.md` in the source repository. Keep changes focused, cover rendering and lifecycle behavior with tests, and verify the build, types, and size budget before submitting changes.
@@ -585,7 +587,11 @@ For implementation contracts, package boundaries, and future plans, see `ARCHITE
 
 If you find `react-weather-effects` useful, please consider sponsoring its ongoing development and maintenance:
 
-💖 [**Sponsor on GitHub**](https://github.com/sponsors/allwin-antony)
+<p align="center">
+  <a href="https://github.com/sponsors/allwin-antony">
+    <img src="https://img.shields.io/badge/Sponsor%20on%20GitHub-ea4aaa?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="Sponsor on GitHub" />
+  </a>
+</p>
 
 ## License
 
