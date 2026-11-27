@@ -4,6 +4,7 @@ import {
   LAYER,
   TickerCtx,
 } from '@react-weather-effects/core';
+import { useLayeredDraw } from './useLayeredDraw';
 import { createTransition, stepTransition } from './transition';
 
 export interface FogProps {
@@ -13,6 +14,11 @@ export interface FogProps {
   speed?: number;
   color?: string;
   layers?: number;
+  /**
+   * Draw order within the canvas; lower values draw first (behind).
+   * Defaults to LAYER.BACKGROUND (0). Not to be confused with `layers`, the number of fog layers.
+   */
+  layer?: number;
 }
 
 interface FogSettings {
@@ -82,12 +88,15 @@ export function Fog({
   speed = 1,
   color = 'rgba(220, 225, 235, 0.35)',
   layers = 3,
+  layer = LAYER.BACKGROUND,
 }: FogProps) {
   const ticker = useContext(TickerCtx);
 
   if (!ticker) {
     throw new Error('<Fog /> must be used inside <WeatherCanvas>');
   }
+
+  const drawRef = useLayeredDraw(ticker, layer);
 
   const settingsRef = useRef<FogSettings>({ density, transitionDuration, speed, color, layers });
 
@@ -156,7 +165,7 @@ export function Fog({
     const puffs: FogPuff[] = [];
     let currentDensity = Math.max(0, Math.min(1, settingsRef.current.density));
     const transition = createTransition(currentDensity, settingsRef.current.transitionDuration);
-    const unregister = ticker.register(LAYER.BACKGROUND, (state: FrameState) => {
+    drawRef.current = (state: FrameState) => {
       const texture = textureRef.current;
       if (!texture) return;
 
@@ -215,10 +224,12 @@ export function Fog({
       }
 
       ctx.globalAlpha = 1.0;
-    });
+    };
 
-    return unregister;
-  }, [ticker]);
+    return () => {
+      drawRef.current = null;
+    };
+  }, [ticker, drawRef]);
 
   return null;
 }

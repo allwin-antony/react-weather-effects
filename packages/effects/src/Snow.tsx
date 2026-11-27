@@ -7,6 +7,7 @@ import {
   PARTICLE_STRIDE,
   TickerCtx,
 } from '@react-weather-effects/core';
+import { useLayeredDraw } from './useLayeredDraw';
 import { createParticleTransition, updateParticleTransition } from './transition';
 
 export interface SnowProps {
@@ -41,6 +42,11 @@ export interface SnowProps {
    * Defaults to 1. Set to 0 to freeze rotation.
    */
   rotationSpeed?: number;
+  /**
+   * Draw order within the canvas; lower values draw first (behind).
+   * Defaults to LAYER.MIDGROUND (100).
+   */
+  layer?: number;
 }
 
 interface SnowSettings {
@@ -281,12 +287,15 @@ export function Snow({
   wobble = true,
   rotation,
   rotationSpeed,
+  layer = LAYER.MIDGROUND,
 }: SnowProps) {
   const ticker = useContext(TickerCtx);
 
   if (!ticker) {
     throw new Error('<Snow /> must be used inside <WeatherCanvas>');
   }
+
+  const drawRef = useLayeredDraw(ticker, layer);
 
   const effectiveRotation = rotation ?? (rotationSpeed !== undefined ? true : wobble);
   const effectiveRotationSpeed = rotationSpeed ?? 1;
@@ -393,7 +402,7 @@ export function Snow({
     );
     let initializedCount = 0;
 
-    const unregister = ticker.register(LAYER.MIDGROUND, (state) => {
+    drawRef.current = (state) => {
       const settings = settingsRef.current;
       const targetCount = Math.round(
         Math.max(0, Math.min(1, settings.intensity)) * state.budget.maxParticles,
@@ -421,10 +430,12 @@ export function Snow({
         }
       }
       drawSnow(pool, count, state, settings, textureRef.current, spriteRef.current, particles.visibility);
-    });
+    };
 
-    return unregister;
-  }, [ticker]);
+    return () => {
+      drawRef.current = null;
+    };
+  }, [ticker, drawRef]);
 
   return null;
 }

@@ -11,15 +11,17 @@
 react-weather-effects/            ← monorepo root (pnpm workspaces)
 ├── packages/
 │   ├── core/                     ← INTERNAL: WeatherCanvas engine, ticker, pool, hooks
-│   ├── effects/                  ← INTERNAL: Rain, Snow, Fog, Lightning, Wind, Hail, Sandstorm, Clouds
-│   ├── react-weather-effects/    ← PUBLISHED: thin entry — re-exports core + effects
-│   └── wmo/                      ← PUBLISHED separately: fromWMOCode() preset mapper
+│   ├── effects/                  ← INTERNAL: Rain, Snow, Fog, Lightning, Heat + scene presets
+│   └── react-weather-effects/    ← PUBLISHED: thin entry — re-exports core + effects
 ├── apps/
-│   └── storybook/                ← visual QA, deterministic scenes, Chromatic CI
+│   └── demo/                     ← Vite playground (deployed live demo)
+├── test/                         ← Vitest suite (jsdom + vitest-canvas-mock)
 ├── pnpm-workspace.yaml
 ├── tsup.config.base.ts           ← shared build settings; public package bundles internal workspaces
 └── tsconfig.base.json
 ```
+
+Planned, not yet in the repository: `packages/wmo/` (`fromWMOCode()` preset mapper, published separately) and `apps/storybook/` (visual QA, deterministic scenes, Chromatic CI). Wind, Clouds, Hail, and Sandstorm effects are roadmap items.
 
 > [!IMPORTANT]
 > **Publishing strategy for v0.1:** Only `react-weather-effects` is published to npm. `core` and `effects` are internal workspace packages — not independently versioned or published. This eliminates cross-package version synchronization complexity. The WMO mapper ships separately as `@react-weather-effects/wmo` when ready (post-v0.1).
@@ -128,7 +130,7 @@ These rules are **part of the contract** — define before implementation, not a
 
 ```tsx
 // packages/effects/src/Rain.tsx
-export function Rain({ intensity = 0.7, angle = 10 }: RainProps) {
+export function Rain({ intensity = 0.7, angle = 10, layer = LAYER.MIDGROUND }: RainProps) {
   const ticker = useContext(TickerCtx);
 
   // Fail early if used outside WeatherCanvas
@@ -136,6 +138,8 @@ export function Rain({ intensity = 0.7, angle = 10 }: RainProps) {
     throw new Error('<Rain /> must be used inside <WeatherCanvas>');
   }
 
+  // Registers a stable forwarder at `layer`; re-registers on layer change only.
+  const drawRef = useLayeredDraw(ticker, layer);
   const settingsRef = useRef({ intensity, angle });
 
   // Update settings without rebuilding the pool — no visible restart
@@ -148,7 +152,7 @@ export function Rain({ intensity = 0.7, angle = 10 }: RainProps) {
     let pool = createParticlePool(ticker.getBudget().maxParticles);
     let initializedCount = 0;
 
-    const unregister = ticker.register(LAYER.BACKGROUND, (state) => {
+    drawRef.current = (state) => {
       const settings = settingsRef.current;
       const count = Math.round(
         Math.max(0, Math.min(1, settings.intensity)) * state.budget.maxParticles,
@@ -164,17 +168,17 @@ export function Rain({ intensity = 0.7, angle = 10 }: RainProps) {
       // Seeded positions make the first dt=0 frame meaningful, even in static mode.
       if (state.dt > 0) updatePool(pool, count, state, settings);
       drawPool(pool, count, state.ctx, settings);
-    });
+    };
 
-    return unregister;  // cleanup on unmount (including StrictMode double-invoke)
-  }, [ticker]);          // ticker is stable by contract — documented guarantee
+    return () => { drawRef.current = null; };  // cleanup on unmount (including StrictMode double-invoke)
+  }, [ticker, drawRef]);  // ticker and drawRef are stable — layer changes never rebuild the pool
 
   return null;  // no DOM output — pure canvas drawing
 }
 ```
 
 > [!IMPORTANT]
-> **`settingsRef` decouples prop changes from pool lifecycle.** Changing `intensity` or `angle` updates the ref and invalidates the scene. Increasing intensity initializes only newly activated particles. A quality upgrade may grow capacity while preserving existing entries; downgrades reduce the active count. Full reinitialization happens on remount.
+> **`settingsRef` decouples prop changes from pool lifecycle.** Changing `intensity` or `angle` updates the ref and invalidates the scene. Changing `layer` re-registers only the forwarder from `useLayeredDraw`, so state held by the draw closure survives reordering. Increasing intensity initializes only newly activated particles. A quality upgrade may grow capacity while preserving existing entries; downgrades reduce the active count. Full reinitialization happens on remount.
 
 **Opt-in scene transitions:** Rain and Snow accept `transitionDuration` (milliseconds, default `0`) to fade added/removed particles while preserving their pools and existing velocity behavior. Fog uses the same option to interpolate density without resetting wisps. Transition state is effect-local and advances only through `FrameState.dt`; `isAnimating` distinguishes animated zero-delta frames from static/paused presentations, which apply targets immediately. Retargeting starts from current visibility. Quality downgrades remain hard active-particle caps, and mounting/unmounting remain immediate; consumers keep effects mounted at zero intensity/density to crossfade scenes.
 
@@ -354,9 +358,9 @@ Initial seeding and capacity growth may consume random values. Repeated `dt = 0`
 
 ---
 
-### Pointer Handling — Mutable Ref (v0.3)
+### Pointer Handling — Mutable Ref (planned)
 
-`FrameState.pointer` is `null` in v0.1. The following tracking path and the public `interactive` prop arrive with pointer interaction in v0.3.
+`FrameState.pointer` is always `null` as of v0.3.0. The following tracking path and the public `interactive` prop arrive with pointer interaction in a later release.
 
 ```ts
 // ❌ Causes a React rerender on every pointermove event (~60/sec)
@@ -587,16 +591,14 @@ CSS `filter: blur()` on large DOM elements is measurably expensive on mobile Saf
 ### Named Exports — Tree-Shakeable
 
 ```tsx
-// v0.1
-import { WeatherCanvas, Rain, Snow, Fog }  from 'react-weather-effects';
+// Shipped (v0.3.0)
+import { WeatherCanvas, Rain, Snow, Fog, Lightning, Heat } from 'react-weather-effects';
+import { drizzle, rainstorm, snowfall, blizzard, mist, thunderstorm, heatwave, presets } from 'react-weather-effects';
 
-// v0.2 additions
-import { Lightning, Wind, Clouds } from 'react-weather-effects';
+// Planned
+import { Wind, Clouds, Hail, Sandstorm } from 'react-weather-effects';
 
-// v0.3 additions
-import { Hail, Sandstorm } from 'react-weather-effects';
-
-// v1.0: separate optional subpackage
+// Planned: separate optional subpackage
 import { fromWMOCode } from '@react-weather-effects/wmo';
 ```
 
@@ -607,7 +609,8 @@ interface WeatherCanvasProps {
   children:       React.ReactNode;
   mode?:          'fullscreen' | 'contained'; // default: 'fullscreen'
   wind?:          { x: number; y: number };   // default: { x: 0, y: 0 }
-  dpr?:           DPRWeight;                 // default: 'normal'; combines with quality cap
+  dpr?:           DPRCap;                    // default: 2; numeric max DPR, combines with quality cap
+                                             // ('light' | 'normal' | 'heavy' strings deprecated: 2 / 2 / 1.5)
   quality?:       Quality;                   // default: 'medium'; cap per effect instance
   reducedMotion?: ReducedMotionProp;         // 'auto' | 'animated' | 'static' | 'off'
   paused?:        boolean;                   // programmatic pause
@@ -680,11 +683,12 @@ const result = fromWMOCode(999);
 | ❄️ **Snow** | 2D Canvas particles | BG | v0.1 | Pool of circular gradients, drift with wind |
 | 🌧️ **Rain** | 2D Canvas lines | BG | v0.1 | `Float32Array` pool; angle + wind deflection |
 | 🌫️ **Fog** | Offscreen texture → `drawImage` | BG | v0.1 | Cached soft gradients; blit drifting copies |
-| ⛈️ **Lightning** | 2D Canvas recursive lines | FG | v0.2 | Procedural jagged fractal; full-canvas opacity flash |
-| 💨 **Wind** | 2D Canvas Bézier streaks | BG | v0.2 | Debris/leaf particles along wind vector |
-| ☁️ **Clouds** | Offscreen noise → `drawImage` | BG | v0.2 | Simplex noise; slow horizontal scroll |
-| 🌨️ **Hail** | 2D Canvas physics | BG | v0.3 | Bounce simulation on floor |
-| 🌪️ **Sandstorm** | 2D Canvas first | BG | v0.3 | **Attempt 2D first** — layered dust textures, directional particles, variable opacity. Move to WebGL only if benchmarks justify it. |
+| ⛈️ **Lightning** | 2D Canvas recursive lines | FG | v0.2 (shipped) | Procedural jagged fractal; opt-in, rate-limited full-canvas flash |
+| 🔥 **Heat** | Cached background image → tessellated `drawImage` refraction | BG | v0.3 (shipped) | Haze-only fallback without `backgroundImage`; optional mirage, shimmer, wisps |
+| 💨 **Wind** | 2D Canvas Bézier streaks | BG | planned | Debris/leaf particles along wind vector |
+| ☁️ **Clouds** | Offscreen noise → `drawImage` | BG | planned | Simplex noise; slow horizontal scroll |
+| 🌨️ **Hail** | 2D Canvas physics | BG | planned | Bounce simulation on floor |
+| 🌪️ **Sandstorm** | 2D Canvas first | BG | planned | **Attempt 2D first** — layered dust textures, directional particles, variable opacity. Move to WebGL only if benchmarks justify it. |
 
 > [!TIP]
 > **Sandstorm: try 2D Canvas before assuming WebGL is needed.** Multiple particle sizes + directional wind + variable opacity + layered cached dust textures on 2D Canvas can produce a convincing sandstorm. Profile on target devices before introducing the secondary-canvas/ImageBitmap/Worker architecture. The WebGL path is available as a measured upgrade, not a default.
@@ -693,7 +697,7 @@ const result = fromWMOCode(999);
 
 ## 🧪 Testing Strategy
 
-### Unit Tests (Vitest + `jest-canvas-mock`)
+### Unit Tests (Vitest + `vitest-canvas-mock`)
 
 | Test case | What it verifies |
 |---|---|
@@ -778,6 +782,8 @@ Canvas mocks cannot measure actual render performance or browser-specific visual
 Record viewport, DPR, quality, effect counts, browser version, and reference hardware with results. Measure CPU draw duration and frame delivery/dropped frames separately; timing a canvas API call alone does not include all asynchronous rasterization/compositing work. Real-browser tests also cover hydration appearance, visibility changes, and the first reduced-motion frame.
 
 ### Bundle Size CI
+
+`.github/workflows/ci.yml` runs typecheck, tests, build, `pnpm size`, and the demo build on every pull request and non-`main` push. `publish.yml` repeats typecheck, tests, and build before publishing from `main`.
 
 Use `size-limit` with `@size-limit/esbuild` and `@size-limit/file` to measure a minified consumer bundle. Set `gzip: true` explicitly: Size Limit defaults to Brotli. Exclude React peer runtime imports, while including all of this library's runtime code.
 
@@ -953,12 +959,13 @@ Pin the build tools through the workspace lockfile. Ensure development/productio
 ```mermaid
 flowchart LR
   A["v0.1 — Core + Big 3\nWeatherCanvas engine\nRain · Snow · Fog\nSSR-safe · Auto-pause\nReduced-motion\nDeterministic tests\nBundle CI"]
-  B["v0.2 — Atmosphere\nLightning · Wind · Clouds\nSmooth crossfading\nThunderstorm demo"]
-  C["v0.3 — Advanced\nHail · Sandstorm (2D first)\nPointer interaction\nDOM collision"]
+  B["v0.2 — Atmosphere (shipped)\nLightning · Shared wind\nSmooth crossfading\nScene presets"]
+  C["v0.3 — Heat (shipped)\nHeat haze · Mirage\nheatwave preset\nPlayground redesign"]
+  C2["Next — Advanced\nWind · Clouds · Hail\nSandstorm (2D first)\nPointer interaction\nDOM collision"]
   D["v0.4 — WebGL Extension\n(only if benchmarks justify)\nOffscreenCanvas + Worker\nImageBitmap compositing"]
   E["v1.0 — Ecosystem\nWMO Preset Mapping\nStable API · Full docs\nPublished Storybook\nPerformance benchmarks"]
 
-  A --> B --> C --> D --> E
+  A --> B --> C --> C2 --> D --> E
 ```
 
 ### v0.1 Scope (Locked)
@@ -977,9 +984,9 @@ flowchart LR
 - [x] Canvas `aria-hidden`, z-index control
 - [x] Canvas context unavailability/loss handling, restoration, and graceful fallback
 - [x] DPR change detection and immediate reclamping after prop updates
-- [x] Deterministic Storybook with seeded PRNG, private manual scheduler, and tracked asset-readiness barrier
+- [ ] Deterministic Storybook with seeded PRNG, private manual scheduler, and tracked asset-readiness barrier (scheduler seam and asset tracking exist; Storybook does not)
 - [x] Core-only 5 kB gzip gate plus Rain/Big-3 size baselines
-- [x] Tree-shaking verification with packed-package consumer builds
+- [ ] Tree-shaking verification with packed-package consumer builds
 - [x] Single published package with bundled private workspaces and verified ESM/CJS/type entry points
 
 **Not in v0.1:**

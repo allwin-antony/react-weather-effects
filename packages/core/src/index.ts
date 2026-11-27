@@ -18,6 +18,9 @@ export {
   clampDPR,
   type Quality,
   type DPRWeight,
+  type DPRCap,
+  DEFAULT_DPR_CAP,
+  resolveDPRCap,
   type RenderBudget,
   QUALITY_LIMITS,
 } from './budget';

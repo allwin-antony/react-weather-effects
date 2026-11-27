@@ -77,7 +77,7 @@ By default, `<WeatherCanvas>` runs in `mode="fullscreen"`, covering the viewport
 - **Layered Fog:** Configure density, drift speed, color, and up to six layers of cached atmospheric textures.
 - **Procedural Lightning:** Seeded, branching bolts with frequency, color, and brightness controls; full-canvas flashes are opt-in and rate-limited.
 - **Shared Wind:** Drive rain and snow horizontally and vertically, and fog horizontally, through `WeatherCanvas.wind`.
-- **Scene Presets:** Start with `drizzle`, `rainstorm`, `snowfall`, `blizzard`, `mist`, or `thunderstorm`, or customize their typed configuration objects.
+- **Scene Presets:** Start with `drizzle`, `rainstorm`, `snowfall`, `blizzard`, `mist`, `thunderstorm`, or `heatwave`, or customize their typed configuration objects.
 - **Smooth Scene Changes:** Opt into particle-preserving intensity and density fades with `transitionDuration`.
 - **Seeded Scenes:** Reproduce random initialization with a canvas seed or an independent lightning seed.
 - **Quality & DPR Controls:** Choose particle and resolution budgets; the core-only bundle stays below 5 kB gzipped, excluding React.
@@ -268,6 +268,7 @@ import {
   Snow,
   Fog,
   Lightning,
+  Heat,
   presets,
   type PresetName,
 } from 'react-weather-effects';
@@ -281,12 +282,13 @@ export function DynamicWeather({ sceneName }: { sceneName: PresetName }) {
       <Snow intensity={0} transitionDuration={800} {...scene.snow} />
       <Fog density={0} transitionDuration={800} {...scene.fog} />
       {scene.lightning && <Lightning {...scene.lightning} />}
+      <Heat intensity={0} transitionDuration={800} layer={-1} {...scene.heat} />
     </WeatherCanvas>
   );
 }
 ```
 
-Rain, snow, and fog remain mounted at zero intensity/density when absent from a preset, allowing their fades to complete. Lightning mounts and unmounts immediately; it does not support `transitionDuration`. All bundled presets leave full-canvas flashes disabled.
+Rain, snow, fog, and heat remain mounted at zero intensity/density when absent from a preset, allowing their fades to complete. Lightning mounts and unmounts immediately; it does not support `transitionDuration`. All bundled presets leave full-canvas flashes disabled.
 
 To customize a preset, spread its prop objects and then override individual settings, such as `<Rain {...thunderstorm.rain} intensity={0.7} />`. Presets and the dictionary are shallow-frozen; avoid mutating their shared nested objects.
 
@@ -302,7 +304,7 @@ All props are optional. `intensity` and `density` are fractions from `0` to `1`,
 | `mode` | `'fullscreen' \| 'contained'` | `'fullscreen'` | Cover the viewport or fill the positioned parent. |
 | `wind` | `{ x: number; y: number }` | `{ x: 0, y: 0 }` | Relative wind input. Positive `x` points right; positive `y` points down. |
 | `quality` | `'low' \| 'medium' \| 'high'` | `'medium'` | Particle budget and maximum device pixel ratio. |
-| `dpr` | `'light' \| 'normal' \| 'heavy'` | `'normal'` | Additional device pixel ratio cap; see [quality and performance](#quality-and-performance). |
+| `dpr` | `number` | `2` | Maximum device pixel ratio, combined with the quality cap; see [quality and performance](#quality-and-performance). |
 | `reducedMotion` | `'auto' \| 'animated' \| 'static' \| 'off'` | `'auto'` | How to handle motion and system preferences. |
 | `paused` | `boolean` | `false` | Freeze simulation while keeping the scene visible. |
 | `seed` | `string \| number` | Per-instance seed | Seed for reproducible random initialization. |
@@ -332,6 +334,7 @@ Changing `wind` updates mounted effects without resetting their particle pools.
 | `dropThickness` | `number` | `1` | Multiplier for raindrop stroke thickness (< 1 for fine mist, > 1 for heavy rain). Alias: `thickness`. |
 | `splashes` | `boolean` | `false` | Enable animated bottom-edge splashes for contained cards or heroes. Alias: `splash`. |
 | `color` | `string` | `'rgba(190, 215, 245, 0.8)'` | CSS color for rain trails and splashes. |
+| `layer` | `number` | `100` | Draw order within the canvas; lower values draw first. See [Layer order](#layer-order). |
 
 With `splashes`, visible drops produce small, varied droplets that rise and fall over a softly expanding ground ripple. Splash size follows `dropThickness`; existing impacts finish their short animation when rain stops. Under heavy rain, excess impacts are skipped instead of restarting active splashes. Splashes stay at the current canvas bottom edge after resizing, and paused/static redraws preserve their state. Use contained mode for a defined ground edge; splashes do not detect other DOM surfaces.
 
@@ -349,6 +352,7 @@ With `splashes`, visible drops produce small, varied droplets that rise and fall
 | `wobble` | `boolean` | `true` | Enable animated sideways sway and fall flutter. |
 | `rotation` | `boolean` | Value of `wobble` | Enable sprite rotation/spinning. Set `false` to drift without rotating. |
 | `rotationSpeed` | `number` | `1` | Multiplier for sprite rotation/spinning speed. Defaults to `1`. Set to `0` to freeze angle. |
+| `layer` | `number` | `100` | Draw order within the canvas; lower values draw first. See [Layer order](#layer-order). |
 
 Use nonnegative sizes, with `minSize <= maxSize`. Built-in flakes have a feathered glow that extends beyond their nominal radius.
 
@@ -367,7 +371,8 @@ Use nonnegative sizes, with `minSize <= maxSize`. Built-in flakes have a feather
 | `transitionDuration` | `number` | `0` | Density fade duration in milliseconds. Keep mounted and set density to `0` to fade out. |
 | `speed` | `number` | `1` | Multiplier for intrinsic drift and shape movement. |
 | `color` | `string` | `'rgba(220, 225, 235, 0.35)'` | CSS color used to tint the cached fog texture. |
-| `layers` | `number` | `3` | Layer count, rounded and clamped between `1` and `6`. |
+| `layers` | `number` | `3` | Number of fog layers, rounded and clamped between `1` and `6`. |
+| `layer` | `number` | `0` | Draw order within the canvas, not a fog layer count. Lower values draw first. See [Layer order](#layer-order). |
 
 Use nonnegative speed multipliers for the usual falling and drifting behavior. Setting `speed={0}` does not necessarily stop wind-driven movement; use `WeatherCanvas paused` to freeze the entire scene.
 
@@ -381,6 +386,7 @@ Use nonnegative speed multipliers for the usual falling and drifting behavior. S
 | `flash` | `boolean` | `false` | Explicit opt-in for full-canvas illumination. Alias: `screenFlash`. |
 | `flashIntensity` | `number` | `0.3` | Illumination intensity, clamped to `0..1`. Non-finite values become `0`; rendered opacity is capped at `0.6`. |
 | `seed` | `string \| number` | Canvas PRNG | Optional effect-local seed for geometry and timing, independent of other effects' random consumption. |
+| `layer` | `number` | `200` | Draw order within the canvas; lower values draw first. See [Layer order](#layer-order). |
 | `reducedMotion` | `'auto' \| boolean` | `'auto'` | Suppress flashes when `true`, or follow the system preference with `'auto'`. `false` overrides the system preference, but never enables flashes in a static or paused canvas. |
 
 The first draw seeds a bolt immediately. Presets use approximately `12s`, `6s`, and `3s` waits between bolts, with seeded ±20% jitter and a `2s` minimum wait. Positive numeric values up to `1` map from slow to fast; values above `1` specify an approximate strikes-per-minute rate, subject to the minimum wait and bolt duration. Visual prop changes do not reset the random sequence.
@@ -398,7 +404,7 @@ The first draw seeds a bolt immediately. Presets use approximately `12s`, `6s`, 
 | `mirage` | `boolean` | `true` | Thin, feathered sky reflection just below the horizon. |
 | `shimmer` | `boolean` | `true` | Slowly rising, low-amplitude hot-air refraction. |
 | `wisps` | `boolean` | `true` | Fine-scale air turbulence; no visible vapor particles. |
-| `layer` | `number` | `LAYER.BACKGROUND` (0) | Stacking layer priority inside the canvas. |
+| `layer` | `number` | `0` | Draw order within the canvas; lower values draw first. See [Layer order](#layer-order). |
 
 Real heat haze bends background light rather than emitting glowing waves. The transparent weather canvas cannot read the DOM behind it: without `backgroundImage`, Heat renders only a restrained haze approximation. Failed image loads also fall back to haze.
 
@@ -414,13 +420,25 @@ In fullscreen mode, the matching background must also be viewport-sized (for exa
 </div>
 ```
 
+### Layer order
+
+Every effect accepts a `layer` number. Effects with lower values draw first, so later layers appear on top. Effects on the same layer draw in mount order. Defaults:
+
+| Effect | Default `layer` |
+| --- | ---: |
+| `Fog`, `Heat` | `0` |
+| `Rain`, `Snow` | `100` |
+| `Lightning` | `200` |
+
+Changing `layer` reorders a mounted effect without resetting its particles, textures, or transitions. For example, `<Fog layer={150} />` draws fog in front of rain and snow.
+
 ### TypeScript exports
 
 The public entry point exports these types in addition to the components:
 
 - `WeatherCanvasProps`, `RainProps`, `SnowProps`, `FogProps`, `LightningProps`, `LightningFrequency`, `HeatProps`
 - `ScenePreset`, `WeatherScene`, `PresetName`, `ScenePresetName`
-- `Quality`, `DPRWeight`, `RenderBudget`
+- `Quality`, `DPRCap`, `RenderBudget`, and the deprecated `DPRWeight`
 - `ReducedMotionProp`, `MotionMode`
 
 `WeatherScene` aliases `ScenePreset`. `PresetName` is the union of the named preset keys, and `ScenePresetName` aliases it.
@@ -439,15 +457,11 @@ Each `WeatherCanvas` owns its rendering budget:
 
 The particle cap is **per effect instance**, not a whole-scene limit. For example, medium quality with `Snow intensity={0.5}` draws 150 flakes. A second identical `Snow` instance can draw another 150. Fog uses a bounded layer count and cached textures instead of this particle count. New lightning bolts use the current quality's subdivision depth (`3`, `4`, or `5`) and at most `1`, `2`, or `3` branches.
 
-The `dpr` prop applies another resolution cap:
+The `dpr` prop is a numeric maximum device pixel ratio (default `2`). Lower it, for example `dpr={1.5}` or `dpr={1}`, to trade sharpness for rendering cost. Nonpositive or non-finite values use the default.
 
-| DPR setting | Additional cap |
-| --- | ---: |
-| `'light'` | 2 |
-| `'normal'` | 2 |
-| `'heavy'` | 1.5 |
+The effective ratio is the minimum of the device DPR, the quality cap, and `dpr`. Size props remain in CSS pixels regardless of DPR.
 
-The effective ratio is the minimum of the device DPR, the quality cap, and the additional DPR cap. `light` and `normal` currently have the same cap. Size props remain in CSS pixels regardless of DPR.
+> **Deprecated:** The string values `'light'` and `'normal'` (both `2`) and `'heavy'` (`1.5`) still work but log a development warning. Replace them with the matching number.
 
 For lower rendering cost:
 
@@ -541,7 +555,7 @@ The repository is a pnpm workspace:
 ```text
 packages/
   core/                    Internal canvas engine, scheduler, budgets, and pools
-  effects/                 Internal Rain, Snow, Fog, and Lightning implementations
+  effects/                 Internal Rain, Snow, Fog, Lightning, and Heat effects, plus scene presets
   react-weather-effects/   Public entry point and distributable bundle
 apps/
   demo/                    Vite demonstration application

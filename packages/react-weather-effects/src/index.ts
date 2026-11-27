@@ -3,6 +3,7 @@ export {
   type WeatherCanvasProps,
   type Quality,
   type DPRWeight,
+  type DPRCap,
   type RenderBudget,
   type ReducedMotionProp,
   type MotionMode,

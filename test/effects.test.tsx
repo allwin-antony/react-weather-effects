@@ -6,6 +6,8 @@ import {
   Rain,
   Snow,
   Fog,
+  Lightning,
+  Heat,
 } from 'react-weather-effects';
 import {
   createSeededRandom,
@@ -1080,5 +1082,59 @@ describe('Weather Effects', () => {
     frame.dt = 0.05;
     act(draw);
     expect(ellipses.mock.calls.map((ripple) => ripple[0])).toEqual(positions);
+  });
+});
+
+describe('Effect layer prop', () => {
+  function createLayerTicker() {
+    const registered = new Map<DrawFn, number>();
+    const ticker: TickerContext = {
+      getBudget: () => ({ maxParticles: 24, quality: 'medium', dpr: 1 }),
+      invalidate: vi.fn(),
+      trackAsset: () => () => {},
+      register: (layer, draw) => {
+        registered.set(draw, layer);
+        return () => { registered.delete(draw); };
+      },
+    };
+    return { ticker, layers: () => [...registered.values()] };
+  }
+
+  const cases: Array<[string, (layer?: number) => React.ReactElement, number]> = [
+    ['Fog', (layer) => <Fog layer={layer} />, 0],
+    ['Rain', (layer) => <Rain layer={layer} />, 100],
+    ['Snow', (layer) => <Snow layer={layer} />, 100],
+    ['Lightning', (layer) => <Lightning layer={layer} />, 200],
+    ['Heat', (layer) => <Heat layer={layer} />, 0],
+  ];
+
+  it.each(cases)('%s registers at its default layer and follows layer changes', (_name, make, defaultLayer) => {
+    const { ticker, layers } = createLayerTicker();
+    const wrap = (el: React.ReactElement) => <TickerCtx.Provider value={ticker}>{el}</TickerCtx.Provider>;
+
+    const { rerender, unmount } = render(wrap(make()));
+    expect(layers()).toEqual([defaultLayer]);
+
+    rerender(wrap(make(-5)));
+    expect(layers()).toEqual([-5]);
+
+    unmount();
+    expect(layers()).toEqual([]);
+  });
+
+  it('keeps Rain particles when the layer changes', () => {
+    const { frame, random, ticker, draw } = createEffectHarness();
+    const wrap = (layer: number) => (
+      <TickerCtx.Provider value={ticker}><Rain intensity={1} layer={layer} /></TickerCtx.Provider>
+    );
+    const { rerender } = render(wrap(100));
+    draw();
+    const seededCalls = random.mock.calls.length;
+    expect(seededCalls).toBeGreaterThan(0);
+
+    rerender(wrap(-1));
+    frame.dt = 0;
+    draw();
+    expect(random.mock.calls.length).toBe(seededCalls);
   });
 });
