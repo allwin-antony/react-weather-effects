@@ -77,7 +77,7 @@ By default, `<WeatherCanvas>` runs in `mode="fullscreen"`, covering the viewport
 - **Layered Fog:** Configure density, drift speed, color, and up to six layers of cached atmospheric textures.
 - **Procedural Lightning:** Seeded, branching bolts with frequency, color, and brightness controls; full-canvas flashes are opt-in and rate-limited.
 - **Shared Wind:** Drive rain and snow horizontally and vertically, and fog horizontally, through `WeatherCanvas.wind`.
-- **Scene Presets:** Start with `drizzle`, `rainstorm`, `snowfall`, `blizzard`, `mist`, or `thunderstorm`, or customize their typed configuration objects.
+- **Scene Presets:** Start with `drizzle`, `rainstorm`, `snowfall`, `blizzard`, `mist`, `thunderstorm`, or `heatwave`, or customize their typed configuration objects.
 - **Smooth Scene Changes:** Opt into particle-preserving intensity and density fades with `transitionDuration`.
 - **Seeded Scenes:** Reproduce random initialization with a canvas seed or an independent lightning seed.
 - **Quality & DPR Controls:** Choose particle and resolution budgets; the core-only bundle stays below 5 kB gzipped, excluding React.
@@ -268,6 +268,7 @@ import {
   Snow,
   Fog,
   Lightning,
+  Heat,
   presets,
   type PresetName,
 } from 'react-weather-effects';
@@ -281,12 +282,13 @@ export function DynamicWeather({ sceneName }: { sceneName: PresetName }) {
       <Snow intensity={0} transitionDuration={800} {...scene.snow} />
       <Fog density={0} transitionDuration={800} {...scene.fog} />
       {scene.lightning && <Lightning {...scene.lightning} />}
+      <Heat intensity={0} transitionDuration={800} layer={-1} {...scene.heat} />
     </WeatherCanvas>
   );
 }
 ```
 
-Rain, snow, and fog remain mounted at zero intensity/density when absent from a preset, allowing their fades to complete. Lightning mounts and unmounts immediately; it does not support `transitionDuration`. All bundled presets leave full-canvas flashes disabled.
+Rain, snow, fog, and heat remain mounted at zero intensity/density when absent from a preset, allowing their fades to complete. Lightning mounts and unmounts immediately; it does not support `transitionDuration`. All bundled presets leave full-canvas flashes disabled.
 
 To customize a preset, spread its prop objects and then override individual settings, such as `<Rain {...thunderstorm.rain} intensity={0.7} />`. Presets and the dictionary are shallow-frozen; avoid mutating their shared nested objects.
 
@@ -541,7 +543,7 @@ The repository is a pnpm workspace:
 ```text
 packages/
   core/                    Internal canvas engine, scheduler, budgets, and pools
-  effects/                 Internal Rain, Snow, Fog, and Lightning implementations
+  effects/                 Internal Rain, Snow, Fog, Lightning, and Heat effects, plus scene presets
   react-weather-effects/   Public entry point and distributable bundle
 apps/
   demo/                    Vite demonstration application

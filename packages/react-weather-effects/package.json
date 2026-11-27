@@ -20,7 +20,9 @@
     "canvas",
     "rain",
     "snow",
-    "fog"
+    "fog",
+    "lightning",
+    "heat"
   ],
   "publishConfig": {
     "access": "public"
