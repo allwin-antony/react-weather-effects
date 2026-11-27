@@ -30,9 +30,9 @@ pnpm add react-weather-effects
 yarn add react-weather-effects
 ```
 
-> **v0.3.0:** To pin this release:
+> **v0.4.0:** To pin this release:
 > ```sh
-> npm install react-weather-effects@0.3.0
+> npm install react-weather-effects@0.4.0
 > ```
 
 ### Requirements
@@ -87,7 +87,7 @@ By default, `<WeatherCanvas>` runs in `mode="fullscreen"`, covering the viewport
 - **SSR & Next.js Safe:** SSR-safe imports and server rendering; use a `'use client'` boundary in Next.js App Router.
 - **TypeScript & Tree-Shaking:** Typed props and presets, tree-shakeable ESM, and CommonJS builds included.
 
-Wind is a shared input for the existing effects, not a standalone component. `Wind` and `Clouds` remain roadmap items and are not exported in v0.3.0.
+Wind is a shared input for the existing effects, not a standalone component. `Wind` and `Clouds` remain roadmap items and are not exported in v0.4.0.
 
 ---
 
@@ -589,10 +589,10 @@ After running `pnpm build`, create a tarball of the public package:
 pnpm --dir packages/react-weather-effects pack --pack-destination ../..
 ```
 
-Install the generated tarball in a separate application using its actual path. For v0.3.0:
+Install the generated tarball in a separate application using its actual path. For v0.4.0:
 
 ```sh
-npm install /path/to/react-weather-effects-0.3.0.tgz
+npm install /path/to/react-weather-effects-0.4.0.tgz
 ```
 
 For implementation contracts, package boundaries, and future plans, see `ARCHITECTURE.md` in the source repository. Keep changes focused, cover rendering and lifecycle behavior with tests, and verify the build, types, and size budget before submitting changes.
