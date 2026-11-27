@@ -1,6 +1,7 @@
 {
   "name": "react-weather-effects-monorepo",
   "private": true,
+  "packageManager": "pnpm@12.21.0",
   "author": "Allwin Antony",
   "license": "MIT",
   "homepage": "https://react-weather-effects-smoky.vercel.app/",

@@ -360,7 +360,7 @@ Initial seeding and capacity growth may consume random values. Repeated `dt = 0`
 
 ### Pointer Handling — Mutable Ref (planned)
 
-`FrameState.pointer` is always `null` as of v0.3.0. The following tracking path and the public `interactive` prop arrive with pointer interaction in a later release.
+`FrameState.pointer` is always `null` as of v0.4.0. The following tracking path and the public `interactive` prop arrive with pointer interaction in a later release.
 
 ```ts
 // ❌ Causes a React rerender on every pointermove event (~60/sec)
@@ -591,7 +591,7 @@ CSS `filter: blur()` on large DOM elements is measurably expensive on mobile Saf
 ### Named Exports — Tree-Shakeable
 
 ```tsx
-// Shipped (v0.3.0)
+// Shipped (v0.4.0)
 import { WeatherCanvas, Rain, Snow, Fog, Lightning, Heat } from 'react-weather-effects';
 import { drizzle, rainstorm, snowfall, blizzard, mist, thunderstorm, heatwave, presets } from 'react-weather-effects';
 
