@@ -8,7 +8,8 @@ import React, {
   useState,
 } from 'react';
 import {
-  type DPRWeight,
+  type DPRCap,
+  DEFAULT_DPR_CAP,
   type Quality,
   type RenderBudget,
   resolveRenderBudget,
@@ -30,7 +31,8 @@ export interface WeatherCanvasProps {
   children?: React.ReactNode;
   mode?: 'fullscreen' | 'contained';
   wind?: { x: number; y: number };
-  dpr?: DPRWeight;
+  /** Maximum device pixel ratio; combines with the quality cap. Defaults to 2. String names are deprecated. */
+  dpr?: DPRCap;
   quality?: Quality;
   reducedMotion?: ReducedMotionProp;
   paused?: boolean;
@@ -50,7 +52,7 @@ export function WeatherCanvas({
   children,
   mode = 'fullscreen',
   wind = { x: 0, y: 0 },
-  dpr = 'normal',
+  dpr = DEFAULT_DPR_CAP,
   quality = 'medium',
   reducedMotion = 'auto',
   paused = false,
@@ -269,6 +271,14 @@ export function WeatherCanvas({
       });
     }
   }, []);
+
+  useEffect(() => {
+    if (__DEV__ && typeof dpr === 'string') {
+      console.warn(
+        `WeatherCanvas: dpr="${dpr}" is deprecated; pass a numeric maximum device pixel ratio instead (for example dpr={1.5}).`,
+      );
+    }
+  }, [dpr]);
 
   // Update budget when quality or dpr prop changes, and invalidate
   useEffect(() => {

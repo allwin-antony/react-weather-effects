@@ -130,7 +130,7 @@ These rules are **part of the contract** — define before implementation, not a
 
 ```tsx
 // packages/effects/src/Rain.tsx
-export function Rain({ intensity = 0.7, angle = 10 }: RainProps) {
+export function Rain({ intensity = 0.7, angle = 10, layer = LAYER.MIDGROUND }: RainProps) {
   const ticker = useContext(TickerCtx);
 
   // Fail early if used outside WeatherCanvas
@@ -138,6 +138,8 @@ export function Rain({ intensity = 0.7, angle = 10 }: RainProps) {
     throw new Error('<Rain /> must be used inside <WeatherCanvas>');
   }
 
+  // Registers a stable forwarder at `layer`; re-registers on layer change only.
+  const drawRef = useLayeredDraw(ticker, layer);
   const settingsRef = useRef({ intensity, angle });
 
   // Update settings without rebuilding the pool — no visible restart
@@ -150,7 +152,7 @@ export function Rain({ intensity = 0.7, angle = 10 }: RainProps) {
     let pool = createParticlePool(ticker.getBudget().maxParticles);
     let initializedCount = 0;
 
-    const unregister = ticker.register(LAYER.BACKGROUND, (state) => {
+    drawRef.current = (state) => {
       const settings = settingsRef.current;
       const count = Math.round(
         Math.max(0, Math.min(1, settings.intensity)) * state.budget.maxParticles,
@@ -166,17 +168,17 @@ export function Rain({ intensity = 0.7, angle = 10 }: RainProps) {
       // Seeded positions make the first dt=0 frame meaningful, even in static mode.
       if (state.dt > 0) updatePool(pool, count, state, settings);
       drawPool(pool, count, state.ctx, settings);
-    });
+    };
 
-    return unregister;  // cleanup on unmount (including StrictMode double-invoke)
-  }, [ticker]);          // ticker is stable by contract — documented guarantee
+    return () => { drawRef.current = null; };  // cleanup on unmount (including StrictMode double-invoke)
+  }, [ticker, drawRef]);  // ticker and drawRef are stable — layer changes never rebuild the pool
 
   return null;  // no DOM output — pure canvas drawing
 }
 ```
 
 > [!IMPORTANT]
-> **`settingsRef` decouples prop changes from pool lifecycle.** Changing `intensity` or `angle` updates the ref and invalidates the scene. Increasing intensity initializes only newly activated particles. A quality upgrade may grow capacity while preserving existing entries; downgrades reduce the active count. Full reinitialization happens on remount.
+> **`settingsRef` decouples prop changes from pool lifecycle.** Changing `intensity` or `angle` updates the ref and invalidates the scene. Changing `layer` re-registers only the forwarder from `useLayeredDraw`, so state held by the draw closure survives reordering. Increasing intensity initializes only newly activated particles. A quality upgrade may grow capacity while preserving existing entries; downgrades reduce the active count. Full reinitialization happens on remount.
 
 **Opt-in scene transitions:** Rain and Snow accept `transitionDuration` (milliseconds, default `0`) to fade added/removed particles while preserving their pools and existing velocity behavior. Fog uses the same option to interpolate density without resetting wisps. Transition state is effect-local and advances only through `FrameState.dt`; `isAnimating` distinguishes animated zero-delta frames from static/paused presentations, which apply targets immediately. Retargeting starts from current visibility. Quality downgrades remain hard active-particle caps, and mounting/unmounting remain immediate; consumers keep effects mounted at zero intensity/density to crossfade scenes.
 
@@ -607,7 +609,8 @@ interface WeatherCanvasProps {
   children:       React.ReactNode;
   mode?:          'fullscreen' | 'contained'; // default: 'fullscreen'
   wind?:          { x: number; y: number };   // default: { x: 0, y: 0 }
-  dpr?:           DPRWeight;                 // default: 'normal'; combines with quality cap
+  dpr?:           DPRCap;                    // default: 2; numeric max DPR, combines with quality cap
+                                             // ('light' | 'normal' | 'heavy' strings deprecated: 2 / 2 / 1.5)
   quality?:       Quality;                   // default: 'medium'; cap per effect instance
   reducedMotion?: ReducedMotionProp;         // 'auto' | 'animated' | 'static' | 'off'
   paused?:        boolean;                   // programmatic pause
@@ -779,6 +782,8 @@ Canvas mocks cannot measure actual render performance or browser-specific visual
 Record viewport, DPR, quality, effect counts, browser version, and reference hardware with results. Measure CPU draw duration and frame delivery/dropped frames separately; timing a canvas API call alone does not include all asynchronous rasterization/compositing work. Real-browser tests also cover hydration appearance, visibility changes, and the first reduced-motion frame.
 
 ### Bundle Size CI
+
+`.github/workflows/ci.yml` runs typecheck, tests, build, `pnpm size`, and the demo build on every pull request and non-`main` push. `publish.yml` repeats typecheck, tests, and build before publishing from `main`.
 
 Use `size-limit` with `@size-limit/esbuild` and `@size-limit/file` to measure a minified consumer bundle. Set `gzip: true` explicitly: Size Limit defaults to Brotli. Exclude React peer runtime imports, while including all of this library's runtime code.
 

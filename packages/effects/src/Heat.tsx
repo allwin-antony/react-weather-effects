@@ -4,6 +4,7 @@ import {
   LAYER,
   TickerCtx,
 } from '@react-weather-effects/core';
+import { useLayeredDraw } from './useLayeredDraw';
 import { createTransition, stepTransition } from './transition';
 
 export interface HeatProps {
@@ -60,7 +61,7 @@ export interface HeatProps {
   wisps?: boolean;
 
   /**
-   * Stacking layer priority.
+   * Draw order within the canvas; lower values draw first (behind).
    * Defaults to LAYER.BACKGROUND (0).
    */
   layer?: number;
@@ -75,7 +76,6 @@ interface HeatSettings {
   mirage: boolean;
   shimmer: boolean;
   wisps: boolean;
-  layer: number;
 }
 
 interface HeatBackground {
@@ -111,6 +111,8 @@ export function Heat({
     throw new Error('<Heat /> must be used inside <WeatherCanvas>');
   }
 
+  const drawRef = useLayeredDraw(ticker, layer);
+
   const settingsRef = useRef<HeatSettings>({
     intensity,
     speed,
@@ -120,7 +122,6 @@ export function Heat({
     mirage,
     shimmer,
     wisps,
-    layer,
   });
 
   useEffect(() => {
@@ -133,10 +134,9 @@ export function Heat({
       mirage,
       shimmer,
       wisps,
-      layer,
     };
     ticker.invalidate();
-  }, [ticker, intensity, speed, color, horizon, transitionDuration, mirage, shimmer, wisps, layer]);
+  }, [ticker, intensity, speed, color, horizon, transitionDuration, mirage, shimmer, wisps]);
 
   const hazeRef = useRef<HTMLCanvasElement | OffscreenCanvas | null>(null);
   const backgroundRef = useRef<HeatBackground | null>(null);
@@ -224,7 +224,7 @@ export function Heat({
       ? Math.max(0, Math.min(1, settingsRef.current.intensity)) : 0;
     const transition = createTransition(currentIntensity, settingsRef.current.transitionDuration);
 
-    const unregister = ticker.register(settingsRef.current.layer, (state: FrameState) => {
+    drawRef.current = (state: FrameState) => {
       const settings = settingsRef.current;
       const targetIntensity = Number.isFinite(settings.intensity)
         ? Math.max(0, Math.min(1, settings.intensity)) : 0;
@@ -337,10 +337,12 @@ export function Heat({
       } finally {
         ctx.restore();
       }
-    });
+    };
 
-    return unregister;
-  }, [ticker]);
+    return () => {
+      drawRef.current = null;
+    };
+  }, [ticker, drawRef]);
 
   return null;
 }

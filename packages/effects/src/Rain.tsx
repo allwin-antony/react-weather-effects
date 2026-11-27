@@ -7,6 +7,7 @@ import {
   PARTICLE_STRIDE,
   TickerCtx,
 } from '@react-weather-effects/core';
+import { useLayeredDraw } from './useLayeredDraw';
 import { createParticleTransition, updateParticleTransition } from './transition';
 
 export interface RainProps {
@@ -35,6 +36,11 @@ export interface RainProps {
    */
   splashes?: boolean;
   splash?: boolean;
+  /**
+   * Draw order within the canvas; lower values draw first (behind).
+   * Defaults to LAYER.MIDGROUND (100).
+   */
+  layer?: number;
 }
 
 interface RainSettings {
@@ -279,12 +285,15 @@ export function Rain({
   thickness,
   splashes,
   splash,
+  layer = LAYER.MIDGROUND,
 }: RainProps) {
   const ticker = useContext(TickerCtx);
 
   if (!ticker) {
     throw new Error('<Rain /> must be used inside <WeatherCanvas>');
   }
+
+  const drawRef = useLayeredDraw(ticker, layer);
 
   const effectiveDropLength = dropLength ?? length ?? 1;
   const effectiveDropThickness = dropThickness ?? thickness ?? 1;
@@ -338,7 +347,7 @@ export function Rain({
     const splashPool = new Float32Array(maxSplashes * SPLASH_STRIDE);
     const splashState = { head: 0, active: false };
 
-    const unregister = ticker.register(LAYER.MIDGROUND, (state) => {
+    drawRef.current = (state) => {
       const settings = settingsRef.current;
       const targetCount = Math.round(
         Math.max(0, Math.min(1, settings.intensity)) * state.budget.maxParticles,
@@ -365,10 +374,12 @@ export function Rain({
         );
       }
       drawPool(pool, count, state, settings, particles.visibility, splashPool, maxSplashes);
-    });
+    };
 
-    return unregister;
-  }, [ticker]);
+    return () => {
+      drawRef.current = null;
+    };
+  }, [ticker, drawRef]);
 
   return null;
 }

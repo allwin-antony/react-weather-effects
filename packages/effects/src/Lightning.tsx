@@ -6,6 +6,7 @@ import {
   type TickerContext,
   TickerCtx,
 } from '@react-weather-effects/core';
+import { useLayeredDraw } from './useLayeredDraw';
 
 export type LightningFrequency = 'rare' | 'occasional' | 'frequent' | number;
 
@@ -66,6 +67,11 @@ export interface LightningProps {
    * Defaults to 'auto'.
    */
   reducedMotion?: 'auto' | boolean;
+  /**
+   * Draw order within the canvas; lower values draw first (behind).
+   * Defaults to LAYER.FOREGROUND (200).
+   */
+  layer?: number;
 }
 
 interface LightningSettings {
@@ -374,12 +380,15 @@ export function Lightning({
   screenFlash = false,
   seed,
   reducedMotion = 'auto',
+  layer = LAYER.FOREGROUND,
 }: LightningProps) {
   const ticker = useContext(TickerCtx);
 
   if (!ticker) {
     throw new Error('<Lightning /> must be used inside <WeatherCanvas>');
   }
+
+  const drawRef = useLayeredDraw(ticker, layer);
 
   const effectiveBrightness = Number.isFinite(brightness) ? Math.max(0, brightness) : 0;
   const effectiveFlashIntensity = Number.isFinite(flashIntensity)
@@ -442,7 +451,7 @@ export function Lightning({
     let countdown = 0; // Trigger initial strike on first step
     let activeBolt: ActiveBolt | null = null;
 
-    const unregister = ticker.register(LAYER.FOREGROUND, (state: FrameState) => {
+    drawRef.current = (state: FrameState) => {
       const settings = settingsRef.current;
       const rnd = seededRandomRef.current ?? state.random;
 
@@ -530,10 +539,12 @@ export function Lightning({
           }
         }
       }
-    });
+    };
 
-    return unregister;
-  }, [ticker]);
+    return () => {
+      drawRef.current = null;
+    };
+  }, [ticker, drawRef]);
 
   return null;
 }
