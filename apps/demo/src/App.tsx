@@ -19,6 +19,16 @@ type EffectId = 'rain' | 'snow' | 'fog' | 'lightning' | 'heat';
 type InspectorTab = 'effects' | 'scene';
 type IconName = EffectId | 'cloud' | 'pause' | 'play' | 'controls';
 
+// Heat sits below the other effects so its sampled background never covers them.
+const DEFAULT_LAYERS: Record<EffectId, number> = { fog: 0, rain: 100, snow: 100, lightning: 200, heat: -1 };
+const LAYER_OPTIONS = [
+  { value: -1, label: 'Back · -1' },
+  { value: 0, label: 'Background · 0' },
+  { value: 100, label: 'Midground · 100' },
+  { value: 200, label: 'Foreground · 200' },
+  { value: 300, label: 'Front · 300' },
+];
+
 const SPRITE_URLS: Record<SpriteChoice, string | undefined> = {
   watercolor: '/snowflake-sprite.png',
   watercolor2: '/snowflake-sprite-2.png',
@@ -128,6 +138,8 @@ export function App() {
   // --- Canvas ---
   const [mode, setMode] = useState<'fullscreen' | 'contained'>('contained');
   const [quality, setQuality] = useState<Quality>('medium');
+  const [maxDpr, setMaxDpr] = useState(2);
+  const [layers, setLayers] = useState<Record<EffectId, number>>(DEFAULT_LAYERS);
   const [reducedMotion, setReducedMotion] = useState<ReducedMotionProp>('auto');
   const [paused, setPaused] = useState(false);
   const [transitionDuration, setTransitionDuration] = useState(800);
@@ -368,6 +380,7 @@ export function App() {
         dropLength={rainDropLength}
         dropThickness={rainDropThickness}
         splashes={rainSplashes}
+        layer={layers.rain}
       />
       <Snow
         intensity={enableSnow ? snowIntensity : 0}
@@ -379,12 +392,14 @@ export function App() {
         sprite={spriteUrl}
         minSize={snowMinSize}
         maxSize={snowMaxSize}
+        layer={layers.snow}
       />
       <Fog
         density={enableFog ? fogDensity : 0}
         transitionDuration={transitionDuration}
         speed={fogSpeed}
         layers={fogLayers}
+        layer={layers.fog}
       />
       {enableLightning && (
         <Lightning
@@ -392,6 +407,7 @@ export function App() {
           flash={lightningFlash}
           brightness={lightningBrightness}
           color={lightningColor}
+          layer={layers.lightning}
         />
       )}
       <Heat
@@ -399,7 +415,7 @@ export function App() {
         speed={heatSpeed}
         backgroundImage={bgTheme === 'desert' ? DESERT_BACKGROUND : undefined}
         horizon={heatHorizon}
-        layer={-1}
+        layer={layers.heat}
         mirage={heatMirage}
         shimmer={heatShimmer}
         wisps={heatWisps}
@@ -411,6 +427,7 @@ export function App() {
   const canvasProps = {
     wind: { x: windX, y: windY },
     quality,
+    dpr: maxDpr,
     reducedMotion,
     paused,
     zIndex: mode === 'fullscreen' ? 5 : 1,
@@ -622,6 +639,12 @@ export function App() {
                         <p className="control-note">{bgTheme === 'desert' ? 'The desert image is sampled for refraction. Match the horizon to the ground plane.' : 'Refraction needs an image. Choose Desert road in the backdrop menu; other backdrops show haze only.'}</p>
                       </>
                     )}
+                    <Section title="Draw order">
+                      <label className="control"><span className="control-label">Layer</span><select value={layers[selectedEffect]} onChange={(e) => setLayers((prev) => ({ ...prev, [selectedEffect]: Number(e.target.value) }))}>
+                        {LAYER_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                      </select></label>
+                      <p className="control-note">Lower layers draw first, behind higher ones. Equal layers draw in mount order.</p>
+                    </Section>
                   </section>
                 </>
               ) : (
@@ -631,6 +654,10 @@ export function App() {
                     <label className="control"><span className="control-label">Quality</span><select value={quality} onChange={(e) => setQuality(e.target.value as Quality)}>
                       <option value="low">Low · 150 particles / effect</option><option value="medium">Medium · 300 particles / effect</option><option value="high">High · 600 particles / effect</option>
                     </select></label>
+                    <label className="control"><span className="control-label">Max DPR</span><select value={maxDpr} onChange={(e) => setMaxDpr(Number(e.target.value))}>
+                      <option value={1}>1× · lowest cost</option><option value={1.5}>1.5×</option><option value={2}>2× · default, sharpest</option>
+                    </select></label>
+                    <p className="control-note">The effective ratio is the lowest of the device ratio, this cap, and the quality cap (Low caps at 1×, Medium and High at 2×).</p>
                     <label className="control"><span className="control-label">Motion</span><select value={reducedMotion} onChange={(e) => setReducedMotion(e.target.value as ReducedMotionProp)}>
                       <option value="auto">Auto · follow device preference</option><option value="animated">Animated</option><option value="static">Static</option><option value="off">Off</option>
                     </select></label>

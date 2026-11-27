@@ -130,4 +130,28 @@ describe('Demo playground', () => {
     expect(screen.getByRole('slider', { name: 'Min size' })).toHaveAttribute('aria-valuetext', '8 px');
     expect(screen.getByRole('slider', { name: 'Max size' })).toHaveAttribute('aria-valuetext', '22 px');
   });
+  it('keeps a separate draw layer per effect', () => {
+    render(<App />);
+    const layer = () => screen.getByRole('combobox', { name: 'Layer' });
+    expect(layer()).toHaveValue('100');
+    fireEvent.click(screen.getByRole('button', { name: 'Rain' }));
+    fireEvent.change(layer(), { target: { value: '300' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Snow' }));
+    expect(layer()).toHaveValue('100');
+    fireEvent.click(screen.getByRole('button', { name: 'Heat' }));
+    expect(layer()).toHaveValue('-1');
+    fireEvent.click(screen.getByRole('button', { name: 'Rain' }));
+    expect(layer()).toHaveValue('300');
+  });
+
+  it('exposes a numeric max DPR control in scene settings', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Scene' }));
+    const dpr = screen.getByRole('combobox', { name: 'Max DPR' });
+    expect(dpr).toHaveValue('2');
+    fireEvent.change(dpr, { target: { value: '1.5' } });
+    fireEvent.click(screen.getByRole('tab', { name: /Effects/ }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Scene' }));
+    expect(screen.getByRole('combobox', { name: 'Max DPR' })).toHaveValue('1.5');
+  });
 });
